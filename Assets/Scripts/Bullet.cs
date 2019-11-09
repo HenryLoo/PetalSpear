@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Bullet : MonoBehaviour {
+    public int Team;
+    public int Damage;
 
 	// Use this for initialization
 	void Start () {
@@ -18,6 +20,14 @@ public class Bullet : MonoBehaviour {
     {
         if (other.gameObject.tag == "Wall")
         {
+            Destroy( this.gameObject );
+            return;
+        }
+
+        Ship otherShip = other.gameObject.GetComponent<Ship>();
+        if (otherShip && otherShip.Team != Team)
+        {
+            otherShip.Health -= Damage;
             Destroy( this.gameObject );
         }
     }
