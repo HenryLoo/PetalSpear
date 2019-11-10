@@ -6,6 +6,9 @@ public class Player : MonoBehaviour
 {
     private Ship ship;
 
+    public AudioSource ThrustSound;
+    public AudioSource BounceSound;
+
     // Use this for initialization
     void Start()
     {
@@ -17,6 +20,10 @@ public class Player : MonoBehaviour
     {
         float vertical = Input.GetAxis( "Vertical" );
         ship.Thrust( vertical );
+        if( vertical != 0 && !ThrustSound.isPlaying )
+            ThrustSound.Play();
+        else if( vertical == 0 )
+            ThrustSound.Stop();
 
         float horizontal = Input.GetAxis( "Horizontal" );
         ship.Rotate( horizontal );
@@ -25,6 +32,13 @@ public class Player : MonoBehaviour
         if( fire != 0 )
         {
             ship.Fire();
+        }
+    }
+    void OnCollisionEnter( Collision other )
+    {
+        if( other.gameObject.tag == "Wall" )
+        {
+            BounceSound.Play();
         }
     }
 }

@@ -16,6 +16,9 @@ public class AIEngine : MonoBehaviour
     private Vector3 playerPos;
     private float playerRotation;
 
+    private bool isFiring = false;
+    public float FiringRadius = 45;
+
     enum AIBehaviour
     {
         PursuePlayer
@@ -46,12 +49,13 @@ public class AIEngine : MonoBehaviour
 
     private void GetWorldData()
     {
-        if (PlayerShip)
+        if( PlayerShip )
         {
             playerPos = PlayerShip.transform.position;
             playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
-            thisToPlayer = playerPos - transform.position;
         }
+
+        thisToPlayer = playerPos - transform.position;
     }
 
     private void MakeDecision()
@@ -60,6 +64,8 @@ public class AIEngine : MonoBehaviour
         {
             currentBehaviour = AIBehaviour.PursuePlayer;
         }
+
+        isFiring = ( Vector3.Angle( ship.FrontVector, thisToPlayer ) <= FiringRadius && PlayerShip );
     }
 
     private void Move()
@@ -74,6 +80,9 @@ public class AIEngine : MonoBehaviour
                 break;
             }
         }
+
+        if( isFiring )
+            ship.Fire();
     }
 
     // Adjust thrust amount based on distance to player.

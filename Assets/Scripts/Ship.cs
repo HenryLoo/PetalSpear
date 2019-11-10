@@ -13,8 +13,8 @@ public class Ship : MonoBehaviour
 
     public Rigidbody Bullet;
     public float BulletSpeed = 20;
-    public int BulletDamage = 5;
-    public float BulletsPerSecond = 6;
+    public int BulletDamage = 10;
+    public float BulletsPerSecond = 4;
     private float currentFireDelay;
 
     private Rigidbody rb;
@@ -22,16 +22,23 @@ public class Ship : MonoBehaviour
 
     public Vector3 FrontVector;
 
+    public GameObject Explosion;
+
+    private TrailRenderer trail;
+
     // Use this for initialization
     void Start()
     {
         rb = GetComponent<Rigidbody>();
+        trail = GetComponent<TrailRenderer>();
     }
 
     // Update is called once per frame
     void Update()
     {
         FrontVector = transform.up;
+        
+        trail.enabled = ( currentVelocity != Vector3.zero );
 
         if (currentFireDelay > 0)
         {
@@ -41,6 +48,7 @@ public class Ship : MonoBehaviour
 
         if (Health <= 0)
         {
+            GameObject effect = Instantiate( Explosion, transform.position, transform.rotation );
             Destroy( this.gameObject );
         }
     }
@@ -49,6 +57,15 @@ public class Ship : MonoBehaviour
     {
         rb.AddForce( currentVelocity );
     }
+
+    void OnCollisionEnter( Collision other )
+    {
+        if( other.gameObject.tag == "Character" )
+        {
+            Physics.IgnoreCollision( other.gameObject.GetComponent<Collider>(), GetComponent<Collider>() );
+        }
+    }
+
 
     public void Thrust(float amount)
     {

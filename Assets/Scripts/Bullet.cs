@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class Bullet : MonoBehaviour {
+    public GameObject HitSpark;
+
     public int Team;
     public int Damage;
 
@@ -13,14 +15,14 @@ public class Bullet : MonoBehaviour {
 	
 	// Update is called once per frame
 	void Update () {
-		
-	}
+
+    }
 
     private void OnTriggerEnter( Collider other )
     {
         if (other.gameObject.tag == "Wall")
         {
-            Destroy( this.gameObject );
+            ProcessHitSpark();
             return;
         }
 
@@ -28,7 +30,14 @@ public class Bullet : MonoBehaviour {
         if (otherShip && otherShip.Team != Team)
         {
             otherShip.Health -= Damage;
-            Destroy( this.gameObject );
+            ProcessHitSpark();
+            return;
         }
+    }
+
+    private void ProcessHitSpark()
+    {
+        Instantiate( HitSpark, transform.position, transform.rotation );
+        Destroy( this.gameObject );
     }
 }
