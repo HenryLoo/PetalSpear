@@ -5,6 +5,7 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     public Rigidbody Bullet;
+    public string Name;
     public Color Colour;
     public float BulletSpeed;
     public int BulletDamage;

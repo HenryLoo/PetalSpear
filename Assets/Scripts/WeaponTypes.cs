@@ -7,7 +7,6 @@ using UnityEngine;
 public struct Weapons
 {
     public WeaponTypes.Type Type;
-    public string Name;
     public Weapon Weapon;
 }
 
@@ -16,7 +15,9 @@ public class WeaponTypes : MonoBehaviour
     public enum Type
     {
         Standard,
-        Blaster
+        Blaster,
+        Spreader,
+        Bomb
     }
 
     public List<Weapons> Weapons;
@@ -32,5 +33,11 @@ public class WeaponTypes : MonoBehaviour
         }
 
         return null;
+    }
+
+    public Weapons GetRandomWeapon()
+    {
+        int index = UnityEngine.Random.Range(1, Weapons.Count);
+        return Weapons[ index ];
     }
 }

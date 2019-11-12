@@ -51,21 +51,21 @@ public class GameController : MonoBehaviour
         if( weaponSpawnTimer == 0 && !CurrentPickup )
         {
             // TODO: support more weapon types.
-            SpawnWeapon( WeaponTypes.Type.Blaster );
+            SpawnWeapon();
         }
     }
 
-    private void SpawnWeapon( WeaponTypes.Type type )
+    private void SpawnWeapon()
     {
         // A weapon already exists, so don't spawn another one.
         if( CurrentPickup )
             return;
 
-        Weapon wpn = weaponTypes.GetWeapon( type );
+        Weapons wpn = weaponTypes.GetRandomWeapon();
         Vector3 position = GetRandomPosition();
         WeaponPickup pickup = ( WeaponPickup ) Instantiate( WeaponPickup, position, transform.rotation );
-        pickup.WeaponType = type;
-        pickup.GetComponent<Renderer>().material.SetColor( "_Color", wpn.Colour );
+        pickup.WeaponType = wpn.Type;
+        pickup.GetComponent<Renderer>().material.SetColor( "_Color", wpn.Weapon.Colour );
         pickup.Game = this;
         CurrentPickup = pickup;
     }
@@ -82,6 +82,7 @@ public class GameController : MonoBehaviour
         Player player = ( Player ) Instantiate( Player, position, currentPlayer.transform.rotation );
         player.transform.SetParent( currentPlayer.transform );
         player.Ship = currentPlayer;
+        currentPlayer.Team = 0;
         GameCamera.Target = currentPlayer.transform;
     }
 
@@ -97,6 +98,7 @@ public class GameController : MonoBehaviour
         AIEngine opponent = ( AIEngine ) Instantiate( AIEngine, position, currentOpponent.transform.rotation );
         opponent.transform.SetParent( currentOpponent.transform );
         opponent.PlayerShip = currentPlayer;
+        currentPlayer.Team = 1;
         opponent.Ship = currentOpponent;
     }
 
