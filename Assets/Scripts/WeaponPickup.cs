@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class WeaponPickup : MonoBehaviour
 {
+    public GameController Game;
     public WeaponTypes.Type WeaponType;
     private AudioSource pickupSound;
     private bool isPickedUp = false;
@@ -17,7 +18,8 @@ public class WeaponPickup : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        transform.rotation = Quaternion.Euler( 0, 45 * Time.deltaTime, 0 ) * transform.rotation;
+        float rotationSpeed = 45 * Time.deltaTime;
+        transform.rotation = Quaternion.Euler( 0, rotationSpeed, rotationSpeed ) * transform.rotation;
 
         if (isPickedUp && !pickupSound.isPlaying)
         {
@@ -36,6 +38,7 @@ public class WeaponPickup : MonoBehaviour
             pickupSound.Play();
             isPickedUp = true;
             GetComponent<Renderer>().enabled = false;
+            Game.ResetWeaponSpawnTimer();
         }
     }
 }

@@ -4,14 +4,10 @@ using UnityEngine;
 
 public class Player : MonoBehaviour
 {
-    private Ship ship;
+    public Ship Ship;
 
     public AudioSource ThrustSound;
     public AudioSource BounceSound;
-    void Awake()
-    {
-        ship = GetComponent<Ship>();
-    }
 
     // Use this for initialization
     void Start()
@@ -23,24 +19,24 @@ public class Player : MonoBehaviour
     void Update()
     {
         float vertical = Input.GetAxis( "Vertical" );
-        ship.Thrust( vertical );
+        Ship.Thrust( vertical );
         if( vertical != 0 && !ThrustSound.isPlaying )
             ThrustSound.Play();
         else if( vertical == 0 )
             ThrustSound.Stop();
 
         float horizontal = Input.GetAxis( "Horizontal" );
-        ship.Rotate( horizontal );
+        Ship.Rotate( horizontal );
 
         float fire = Input.GetAxis( "Fire1" );
         float fire2 = Input.GetAxis( "Fire2" );
         if( fire2 != 0 )
         {
-            ship.FireHeavy();
+            Ship.FireHeavy();
         }
         else if( fire != 0 )
         {
-            ship.FireStandard();
+            Ship.FireStandard();
         }
     }
     void OnCollisionEnter( Collision other )

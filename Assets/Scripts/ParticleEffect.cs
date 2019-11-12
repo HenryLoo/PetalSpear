@@ -5,12 +5,12 @@ using UnityEngine;
 public class ParticleEffect : MonoBehaviour
 {
     private ParticleSystem particles;
-    private AudioSource audio;
+    private AudioSource particleAudio;
 
     void Awake()
     {
         particles = GetComponent<ParticleSystem>();
-        audio = GetComponent<AudioSource>();
+        particleAudio = GetComponent<AudioSource>();
     }
 
     // Use this for initialization
@@ -22,7 +22,7 @@ public class ParticleEffect : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if( particles.isStopped && (!audio || !audio.isPlaying) )
+        if( particles.isStopped && (!particleAudio || !particleAudio.isPlaying) )
             Destroy( gameObject );
     }
 }

@@ -8,7 +8,7 @@ public class AIEngine : MonoBehaviour
     public float ArrivalRadius = 10;
     public float ThrustGain = 0.5f;
 
-    private Ship ship;
+    public Ship Ship;
     private float thrustAmount;
     Vector3 thisToPlayer;
 
@@ -32,11 +32,6 @@ public class AIEngine : MonoBehaviour
     }
 
     private AIBehaviour currentBehaviour;
-
-    void Awake()
-    {
-        ship = GetComponent<Ship>();
-    }
 
     // Use this for initialization
     void Start()
@@ -65,12 +60,12 @@ public class AIEngine : MonoBehaviour
 
     private void MakeDecision()
     {
-        if( ClassifyHealth( ship.Health ) == HealthState.Healthy )
+        if( ClassifyHealth( Ship.Health ) == HealthState.Healthy )
         {
             currentBehaviour = AIBehaviour.PursuePlayer;
         }
 
-        isFiring = ( Vector3.Angle( ship.FrontVector, thisToPlayer ) <= FiringRadius && PlayerShip );
+        isFiring = ( Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius && PlayerShip );
     }
 
     private void Move()
@@ -81,13 +76,13 @@ public class AIEngine : MonoBehaviour
             {
                 FacePlayer();
                 Arrive();
-                ship.Thrust( thrustAmount );
+                Ship.Thrust( thrustAmount );
                 break;
             }
         }
 
         if( isFiring )
-            ship.FireStandard();
+            Ship.FireStandard();
     }
 
     // Adjust thrust amount based on distance to player.
@@ -113,9 +108,9 @@ public class AIEngine : MonoBehaviour
     private void FacePlayer()
     {
         float direction = 0;
-        float angleDiff = SignedAngle( ship.FrontVector, thisToPlayer, Vector3.up );
+        float angleDiff = SignedAngle( Ship.FrontVector, thisToPlayer, Vector3.up );
         direction = Mathf.Sign( angleDiff );
-        ship.Rotate( direction );
+        Ship.Rotate( direction );
     }
 
     private HealthState ClassifyHealth( float health )
