@@ -13,6 +13,7 @@ public class Ship : MonoBehaviour
 
     public WeaponTypes WeaponTypes;
     private Weapon standardWeapon;
+    private Weapon heavyWeapon;
 
     private Rigidbody rb;
     private Vector3 currentVelocity;
@@ -23,14 +24,18 @@ public class Ship : MonoBehaviour
 
     private TrailRenderer trail;
 
-    // Use this for initialization
-    void Start()
+    void Awake()
     {
         rb = GetComponent<Rigidbody>();
         trail = GetComponent<TrailRenderer>();
+    }
 
+    // Use this for initialization
+    void Start()
+    {
         Weapon standard = WeaponTypes.GetWeapon( WeaponTypes.Type.Standard );
         standardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
+        standardWeapon.transform.SetParent( transform );
     }
 
     // Update is called once per frame
@@ -42,9 +47,12 @@ public class Ship : MonoBehaviour
 
         standardWeapon.UpdateValues();
 
+        if( heavyWeapon )
+            heavyWeapon.UpdateValues();
+
         if (Health <= 0)
         {
-            GameObject effect = Instantiate( Explosion, transform.position, transform.rotation );
+            Instantiate( Explosion, transform.position, transform.rotation );
             Destroy( this.gameObject );
         }
     }
@@ -86,8 +94,23 @@ public class Ship : MonoBehaviour
         }
     }
 
-    public void Fire()
+    public void FireStandard()
     {
         standardWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
+    }
+
+    public void FireHeavy()
+    {
+        if( !heavyWeapon )
+            return;
+
+        heavyWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
+    }
+
+    public void PickUpWeapon( WeaponTypes.Type type )
+    {
+        Weapon heavy = WeaponTypes.GetWeapon( type );
+        heavyWeapon = ( Weapon ) Instantiate( heavy, transform.position, transform.rotation );
+        heavyWeapon.transform.SetParent( transform );
     }
 }

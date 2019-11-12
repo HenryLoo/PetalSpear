@@ -15,7 +15,8 @@ public class WeaponTypes : MonoBehaviour
 {
     public enum Type
     {
-        Standard
+        Standard,
+        Blaster
     }
 
     public List<Weapons> Weapons;

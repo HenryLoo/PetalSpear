@@ -14,7 +14,7 @@ public class AIEngine : MonoBehaviour
 
     public Ship PlayerShip;
     private Vector3 playerPos;
-    private float playerRotation;
+    //private float playerRotation;
 
     private bool isFiring = false;
     public float FiringRadius = 45;
@@ -33,10 +33,15 @@ public class AIEngine : MonoBehaviour
 
     private AIBehaviour currentBehaviour;
 
+    void Awake()
+    {
+        ship = GetComponent<Ship>();
+    }
+
     // Use this for initialization
     void Start()
     {
-        ship = GetComponent<Ship>();
+
     }
 
     // Update is called once per frame
@@ -52,7 +57,7 @@ public class AIEngine : MonoBehaviour
         if( PlayerShip )
         {
             playerPos = PlayerShip.transform.position;
-            playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
+            //playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
         }
 
         thisToPlayer = playerPos - transform.position;
@@ -82,7 +87,7 @@ public class AIEngine : MonoBehaviour
         }
 
         if( isFiring )
-            ship.Fire();
+            ship.FireStandard();
     }
 
     // Adjust thrust amount based on distance to player.

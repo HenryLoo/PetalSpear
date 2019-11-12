@@ -8,11 +8,15 @@ public class Player : MonoBehaviour
 
     public AudioSource ThrustSound;
     public AudioSource BounceSound;
+    void Awake()
+    {
+        ship = GetComponent<Ship>();
+    }
 
     // Use this for initialization
     void Start()
     {
-        ship = GetComponent<Ship>();
+
     }
 
     // Update is called once per frame
@@ -29,9 +33,14 @@ public class Player : MonoBehaviour
         ship.Rotate( horizontal );
 
         float fire = Input.GetAxis( "Fire1" );
-        if( fire != 0 )
+        float fire2 = Input.GetAxis( "Fire2" );
+        if( fire2 != 0 )
         {
-            ship.Fire();
+            ship.FireHeavy();
+        }
+        else if( fire != 0 )
+        {
+            ship.FireStandard();
         }
     }
     void OnCollisionEnter( Collision other )
