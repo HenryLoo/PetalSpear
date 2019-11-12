@@ -11,11 +11,8 @@ public class Ship : MonoBehaviour
     public float RotationSpeed = 180;
     public float ThrustSpeed = 10;
 
-    public Rigidbody Bullet;
-    public float BulletSpeed = 20;
-    public int BulletDamage = 10;
-    public float BulletsPerSecond = 4;
-    private float currentFireDelay;
+    public WeaponTypes WeaponTypes;
+    private Weapon standardWeapon;
 
     private Rigidbody rb;
     private Vector3 currentVelocity;
@@ -31,6 +28,9 @@ public class Ship : MonoBehaviour
     {
         rb = GetComponent<Rigidbody>();
         trail = GetComponent<TrailRenderer>();
+
+        Weapon standard = WeaponTypes.GetWeapon( WeaponTypes.Type.Standard );
+        standardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
     }
 
     // Update is called once per frame
@@ -40,11 +40,7 @@ public class Ship : MonoBehaviour
         
         trail.enabled = ( currentVelocity != Vector3.zero );
 
-        if (currentFireDelay > 0)
-        {
-            currentFireDelay -= Time.deltaTime;
-            currentFireDelay = Mathf.Max( currentFireDelay, 0 );
-        }
+        standardWeapon.UpdateValues();
 
         if (Health <= 0)
         {
@@ -92,14 +88,6 @@ public class Ship : MonoBehaviour
 
     public void Fire()
     {
-        if (currentFireDelay == 0)
-        {
-            Rigidbody bulletInstance = ( Rigidbody ) Instantiate( Bullet, transform.position, transform.rotation );
-            bulletInstance.velocity = FrontVector * ( BulletSpeed + Vector3.Magnitude( currentVelocity ) );
-            Bullet bullet = bulletInstance.GetComponent<Bullet>();
-            bullet.Team = Team;
-            bullet.Damage = BulletDamage;
-            currentFireDelay = 1 / BulletsPerSecond;
-        }
+        standardWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
     }
 }
