@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class WeaponPickup : MonoBehaviour
 {
-    public GameController Game;
     public WeaponTypes.Type WeaponType;
     private AudioSource pickupSound;
     private bool isPickedUp = false;
@@ -38,7 +37,6 @@ public class WeaponPickup : MonoBehaviour
             pickupSound.Play();
             isPickedUp = true;
             GetComponent<Renderer>().enabled = false;
-            Game.ResetWeaponSpawnTimer();
         }
     }
 }

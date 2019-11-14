@@ -12,17 +12,24 @@ public class GameController : MonoBehaviour
     public Vector2 OpponentSpawnPos;
     public float OpponentSpawnRot = 180;
 
+    public float ShipSpawnDelay;
+    private float playerSpawnTimer;
+    private float opponentSpawnTimer;
+    private bool isReadyToSpawnPlayer = true;
+    private bool isReadyToSpawnOpponent = true;
+
     public WeaponPickup WeaponPickup;
     private WeaponTypes weaponTypes;
     public Vector2 WeaponSpawnRateRange;
     private float weaponSpawnTimer;
+    private bool isReadyToSpawnWeapon = true;
 
     public CameraFollow GameCamera;
     public Ship Ship;
     public Player Player;
     public AIEngine AIEngine;
 
-    private Ship currentPlayer;
+    public Ship CurrentPlayer;
     private Ship currentOpponent;
     public WeaponPickup CurrentPickup;
 
@@ -42,16 +49,61 @@ public class GameController : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if( weaponSpawnTimer > 0 )
+        if( !CurrentPickup )
         {
-            weaponSpawnTimer -= Time.deltaTime;
-            weaponSpawnTimer = Mathf.Max( weaponSpawnTimer, 0 );
+            if( isReadyToSpawnWeapon )
+            {
+                ResetWeaponSpawnTimer();
+                isReadyToSpawnWeapon = false;
+            }
+
+            if( weaponSpawnTimer > 0 )
+            {
+                weaponSpawnTimer -= Time.deltaTime;
+            }
+            else
+            {
+                SpawnWeapon();
+                isReadyToSpawnWeapon = true;
+            }
         }
 
-        if( weaponSpawnTimer == 0 && !CurrentPickup )
+        if( !CurrentPlayer )
         {
-            // TODO: support more weapon types.
-            SpawnWeapon();
+            if( isReadyToSpawnPlayer )
+            {
+                playerSpawnTimer = ShipSpawnDelay;
+                isReadyToSpawnPlayer = false;
+            }
+
+            if( playerSpawnTimer > 0 )
+            {
+                playerSpawnTimer -= Time.deltaTime;
+            }
+            else
+            {
+                SpawnPlayer( true );
+                isReadyToSpawnPlayer = true;
+            }
+        }
+
+        if( !currentOpponent )
+        {
+            if( isReadyToSpawnOpponent )
+            {
+                opponentSpawnTimer = ShipSpawnDelay;
+                isReadyToSpawnOpponent = false;
+            }
+
+            if( opponentSpawnTimer > 0 )
+            {
+                opponentSpawnTimer -= Time.deltaTime;
+            }
+            else
+            {
+                SpawnOpponent( true );
+                isReadyToSpawnOpponent = true;
+            }
         }
     }
 
@@ -66,24 +118,23 @@ public class GameController : MonoBehaviour
         WeaponPickup pickup = ( WeaponPickup ) Instantiate( WeaponPickup, position, transform.rotation );
         pickup.WeaponType = wpn.Type;
         pickup.GetComponent<Renderer>().material.SetColor( "_Color", wpn.Weapon.Colour );
-        pickup.Game = this;
         CurrentPickup = pickup;
     }
 
     private void SpawnPlayer( bool isRandomPos )
     {
         // Player already exists, so don't spawn another one.
-        if( currentPlayer )
+        if( CurrentPlayer )
             return;
 
         Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( PlayerSpawnPos.x, 0, PlayerSpawnPos.y );
         Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 90, PlayerSpawnRot, 0 );
-        currentPlayer = ( Ship ) Instantiate( Ship, position, rotation );
-        Player player = ( Player ) Instantiate( Player, position, currentPlayer.transform.rotation );
-        player.transform.SetParent( currentPlayer.transform );
-        player.Ship = currentPlayer;
-        currentPlayer.Team = 0;
-        GameCamera.Target = currentPlayer.transform;
+        CurrentPlayer = ( Ship ) Instantiate( Ship, position, rotation );
+        Player player = ( Player ) Instantiate( Player, position, CurrentPlayer.transform.rotation );
+        player.transform.SetParent( CurrentPlayer.transform );
+        player.Ship = CurrentPlayer;
+        CurrentPlayer.Team = 0;
+        GameCamera.Target = CurrentPlayer.transform;
     }
 
     private void SpawnOpponent( bool isRandomPos )
@@ -97,8 +148,8 @@ public class GameController : MonoBehaviour
         currentOpponent = ( Ship ) Instantiate( Ship, position, rotation );
         AIEngine opponent = ( AIEngine ) Instantiate( AIEngine, position, currentOpponent.transform.rotation );
         opponent.transform.SetParent( currentOpponent.transform );
-        opponent.PlayerShip = currentPlayer;
-        currentPlayer.Team = 1;
+        opponent.Game = this;
+        currentOpponent.Team = 1;
         opponent.Ship = currentOpponent;
     }
 

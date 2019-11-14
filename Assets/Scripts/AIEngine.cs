@@ -12,7 +12,7 @@ public class AIEngine : MonoBehaviour
     private float thrustAmount;
     Vector3 thisToPlayer;
 
-    public Ship PlayerShip;
+    public GameController Game;
     private Vector3 playerPos;
     //private float playerRotation;
 
@@ -49,9 +49,9 @@ public class AIEngine : MonoBehaviour
 
     private void GetWorldData()
     {
-        if( PlayerShip )
+        if( Game.CurrentPlayer )
         {
-            playerPos = PlayerShip.transform.position;
+            playerPos = Game.CurrentPlayer.transform.position;
             //playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
         }
 
@@ -65,7 +65,7 @@ public class AIEngine : MonoBehaviour
             currentBehaviour = AIBehaviour.PursuePlayer;
         }
 
-        isFiring = ( Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius && PlayerShip );
+        isFiring = ( Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius && Game.CurrentPlayer );
     }
 
     private void Move()

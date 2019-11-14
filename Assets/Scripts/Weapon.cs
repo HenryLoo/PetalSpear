@@ -14,8 +14,9 @@ public class Weapon : MonoBehaviour
     public float SpreadAngle;
     public float BulletsPerSecond;
     private float currentFireDelay;
-    private AudioSource fireSound;
     public int Ammo;
+    public bool IsAffectedByShipVel;
+    private AudioSource fireSound;
 
     void Awake()
     {
@@ -67,7 +68,9 @@ public class Weapon : MonoBehaviour
             for( int i = 0; i < NumBullets; ++i )
             {
                 Rigidbody bulletInstance = ( Rigidbody ) Instantiate( Bullet, position, transform.rotation );
-                bulletInstance.velocity = currentDir * ( BulletSpeed + Vector3.Magnitude( currentVelocity ) );
+                bulletInstance.velocity = currentDir * BulletSpeed;
+                if( IsAffectedByShipVel )
+                    bulletInstance.velocity = bulletInstance.velocity + currentVelocity / 2;
                 Bullet bullet = bulletInstance.GetComponent<Bullet>();
                 bullet.Team = team;
                 bullet.Damage = BulletDamage;

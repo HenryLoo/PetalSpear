@@ -17,7 +17,8 @@ public class WeaponTypes : MonoBehaviour
         Standard,
         Blaster,
         Spreader,
-        Bomb
+        Bomb,
+        Nova
     }
 
     public List<Weapons> Weapons;

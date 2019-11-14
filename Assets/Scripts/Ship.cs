@@ -59,7 +59,12 @@ public class Ship : MonoBehaviour
 
     void FixedUpdate()
     {
-        rb.AddForce( currentVelocity );
+        // Only apply force to move if speed is lower than terminal.
+        float speed = Vector3.Magnitude( rb.velocity );
+        if (speed < ThrustSpeed)
+        {
+            rb.AddForce( currentVelocity );
+        }
     }
 
     void OnCollisionEnter( Collision other )
