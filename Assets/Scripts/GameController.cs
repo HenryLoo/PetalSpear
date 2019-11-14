@@ -33,7 +33,7 @@ public class GameController : MonoBehaviour
     private Ship currentOpponent;
     public WeaponPickup CurrentPickup;
 
-    public GameObject RedText;
+    public TextMesh RedText;
     private const string DESTROYED_TEXT = "DESTROYED";
     private TextMesh playerDestroyed;
     private TextMesh opponentDestroyed;
@@ -97,7 +97,6 @@ public class GameController : MonoBehaviour
             {
                 SpawnPlayer( true );
                 isReadyToSpawnPlayer = true;
-                Destroy( playerDestroyed );
             }
         }
 
@@ -123,7 +122,6 @@ public class GameController : MonoBehaviour
             {
                 SpawnOpponent( true );
                 isReadyToSpawnOpponent = true;
-                Destroy( opponentDestroyed );
             }
         }
     }
@@ -193,8 +191,8 @@ public class GameController : MonoBehaviour
 
     private TextMesh CreateRedText( Vector3 position )
     {
-        GameObject obj = Instantiate( RedText, position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
-        TextMesh text = obj.GetComponent<TextMesh>();
+        TextMesh text = Instantiate( RedText, position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
+        text.GetComponent<TextDestroy>().Duration = ShipSpawnDelay;
         return text;
     }
 }

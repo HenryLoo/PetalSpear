@@ -65,7 +65,7 @@ public class AIEngine : MonoBehaviour
             currentBehaviour = AIBehaviour.PursuePlayer;
         }
 
-        isFiring = ( Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius && Game.CurrentPlayer );
+        IsFiring();
     }
 
     private void Move()
@@ -121,6 +121,14 @@ public class AIEngine : MonoBehaviour
             return HealthState.Hurt;
         else
             return HealthState.Healthy;
+    }
+
+    private void IsFiring()
+    {
+        isFiring = Game.CurrentPlayer;
+        isFiring &= Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius;
+        float bulletRange = Ship.StandardWeapon.BulletSpeed * Ship.StandardWeapon.BulletDuration;
+        isFiring &= Vector3.Magnitude( thisToPlayer ) <= bulletRange;
     }
 
     // SignedAngle doesn't exist in this version of Unity.

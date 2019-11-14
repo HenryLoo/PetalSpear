@@ -12,8 +12,8 @@ public class Ship : MonoBehaviour
     public float ThrustSpeed = 10;
 
     public WeaponTypes WeaponTypes;
-    private Weapon standardWeapon;
-    private Weapon heavyWeapon;
+    public Weapon StandardWeapon;
+    public Weapon HeavyWeapon;
 
     private Rigidbody rb;
     private Vector3 currentVelocity;
@@ -28,6 +28,9 @@ public class Ship : MonoBehaviour
     private Color colourStart = Color.white;
     private Color colourEnd = Color.white;
 
+    public TextMesh Text;
+    private const float PICKUP_TEXT_DURATION = 2;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -39,8 +42,8 @@ public class Ship : MonoBehaviour
     void Start()
     {
         Weapon standard = WeaponTypes.GetWeapon( WeaponTypes.Type.Standard );
-        standardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
-        standardWeapon.transform.SetParent( transform );
+        StandardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
+        StandardWeapon.transform.SetParent( transform );
     }
 
     // Update is called once per frame
@@ -50,12 +53,12 @@ public class Ship : MonoBehaviour
 
         trail.enabled = ( currentVelocity != Vector3.zero );
 
-        standardWeapon.UpdateValues();
+        StandardWeapon.UpdateValues();
 
-        if( heavyWeapon )
+        if( HeavyWeapon )
         {
-            heavyWeapon.UpdateValues();
-            colourEnd = heavyWeapon.Colour;
+            HeavyWeapon.UpdateValues();
+            colourEnd = HeavyWeapon.Colour;
         }
         else
         {
@@ -116,21 +119,25 @@ public class Ship : MonoBehaviour
 
     public void FireStandard()
     {
-        standardWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
+        StandardWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
     }
 
     public void FireHeavy()
     {
-        if( !heavyWeapon )
+        if( !HeavyWeapon )
             return;
 
-        heavyWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
+        HeavyWeapon.Fire( transform.position, FrontVector, currentVelocity, Team );
     }
 
     public void PickUpWeapon( WeaponTypes.Type type )
     {
         Weapon heavy = WeaponTypes.GetWeapon( type );
-        heavyWeapon = ( Weapon ) Instantiate( heavy, transform.position, transform.rotation );
-        heavyWeapon.transform.SetParent( transform );
+        HeavyWeapon = ( Weapon ) Instantiate( heavy, transform.position, transform.rotation );
+        HeavyWeapon.transform.SetParent( transform );
+
+        TextMesh text = Instantiate( Text, transform.position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
+        text.text = HeavyWeapon.Name + " (" + HeavyWeapon.Ammo + "x)";
+        text.GetComponent<TextDestroy>().Duration = PICKUP_TEXT_DURATION;
     }
 }
