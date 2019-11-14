@@ -8,6 +8,7 @@ public class Weapon : MonoBehaviour
     public string Name;
     public Color Colour;
     public float BulletSpeed;
+    public float BulletDuration;
     public int BulletDamage;
     public float BulletSize;
     public int NumBullets;
@@ -17,6 +18,7 @@ public class Weapon : MonoBehaviour
     public int Ammo;
     public bool IsAffectedByShipVel;
     private AudioSource fireSound;
+    public GameObject HitSpark;
 
     void Awake()
     {
@@ -70,12 +72,14 @@ public class Weapon : MonoBehaviour
                 Rigidbody bulletInstance = ( Rigidbody ) Instantiate( Bullet, position, transform.rotation );
                 bulletInstance.velocity = currentDir * BulletSpeed;
                 if( IsAffectedByShipVel )
-                    bulletInstance.velocity = bulletInstance.velocity + currentVelocity / 2;
+                    bulletInstance.velocity = bulletInstance.velocity + currentVelocity / 3;
                 Bullet bullet = bulletInstance.GetComponent<Bullet>();
                 bullet.Team = team;
                 bullet.Damage = BulletDamage;
                 bullet.GetComponent<Renderer>().material.SetColor( "_Color", Colour );
                 bullet.transform.localScale = bullet.transform.localScale * BulletSize;
+                bullet.HitSpark = HitSpark;
+                bullet.Duration = BulletDuration;
                 TrailRenderer trail = bullet.GetComponent<TrailRenderer>();
                 trail.material.color = Colour;
                 trail.widthMultiplier = trail.widthMultiplier * BulletSize * 2;

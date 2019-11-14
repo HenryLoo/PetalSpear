@@ -33,6 +33,13 @@ public class GameController : MonoBehaviour
     private Ship currentOpponent;
     public WeaponPickup CurrentPickup;
 
+    public GameObject RedText;
+    private const string DESTROYED_TEXT = "DESTROYED";
+    private TextMesh playerDestroyed;
+    private TextMesh opponentDestroyed;
+    private Vector3 playerPos;
+    private Vector3 opponentPos;
+
     void Awake()
     {
         weaponTypes = GetComponent<WeaponTypes>();
@@ -68,41 +75,55 @@ public class GameController : MonoBehaviour
             }
         }
 
-        if( !CurrentPlayer )
+        if( CurrentPlayer )
+        {
+            playerPos = CurrentPlayer.transform.position;
+        }
+        else
         {
             if( isReadyToSpawnPlayer )
             {
                 playerSpawnTimer = ShipSpawnDelay;
                 isReadyToSpawnPlayer = false;
+                playerDestroyed = CreateRedText( playerPos );
             }
 
             if( playerSpawnTimer > 0 )
             {
                 playerSpawnTimer -= Time.deltaTime;
+                playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
             }
             else
             {
                 SpawnPlayer( true );
                 isReadyToSpawnPlayer = true;
+                Destroy( playerDestroyed );
             }
         }
 
-        if( !currentOpponent )
+        if( currentOpponent )
+        {
+            opponentPos = currentOpponent.transform.position;
+        }
+        else
         {
             if( isReadyToSpawnOpponent )
             {
                 opponentSpawnTimer = ShipSpawnDelay;
                 isReadyToSpawnOpponent = false;
+                opponentDestroyed = CreateRedText( opponentPos );
             }
 
             if( opponentSpawnTimer > 0 )
             {
                 opponentSpawnTimer -= Time.deltaTime;
+                opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
             }
             else
             {
                 SpawnOpponent( true );
                 isReadyToSpawnOpponent = true;
+                Destroy( opponentDestroyed );
             }
         }
     }
@@ -168,5 +189,12 @@ public class GameController : MonoBehaviour
     public void ResetWeaponSpawnTimer()
     {
         weaponSpawnTimer = Random.Range( WeaponSpawnRateRange.x, WeaponSpawnRateRange.y );
+    }
+
+    private TextMesh CreateRedText( Vector3 position )
+    {
+        GameObject obj = Instantiate( RedText, position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
+        TextMesh text = obj.GetComponent<TextMesh>();
+        return text;
     }
 }

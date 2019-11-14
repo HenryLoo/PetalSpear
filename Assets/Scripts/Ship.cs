@@ -24,10 +24,15 @@ public class Ship : MonoBehaviour
 
     private TrailRenderer trail;
 
+    private Renderer rend;
+    private Color colourStart = Color.white;
+    private Color colourEnd = Color.white;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
         trail = GetComponent<TrailRenderer>();
+        rend = GetComponent<Renderer>();
     }
 
     // Use this for initialization
@@ -42,15 +47,25 @@ public class Ship : MonoBehaviour
     void Update()
     {
         FrontVector = transform.up;
-        
+
         trail.enabled = ( currentVelocity != Vector3.zero );
 
         standardWeapon.UpdateValues();
 
         if( heavyWeapon )
+        {
             heavyWeapon.UpdateValues();
+            colourEnd = heavyWeapon.Colour;
+        }
+        else
+        {
+            colourEnd = Color.white;
+        }
 
-        if (Health <= 0)
+        float lerp = Mathf.PingPong( Time.time, 1 ) / 1;
+        rend.material.color = Color.Lerp( colourStart, colourEnd, lerp );
+
+        if( Health <= 0 )
         {
             Instantiate( Explosion, transform.position, transform.rotation );
             Destroy( this.gameObject );
@@ -61,7 +76,7 @@ public class Ship : MonoBehaviour
     {
         // Only apply force to move if speed is lower than terminal.
         float speed = Vector3.Magnitude( rb.velocity );
-        if (speed < ThrustSpeed)
+        if( speed < ThrustSpeed )
         {
             rb.AddForce( currentVelocity );
         }
@@ -76,7 +91,7 @@ public class Ship : MonoBehaviour
     }
 
 
-    public void Thrust(float amount)
+    public void Thrust( float amount )
     {
         if( amount != 0 )
         {
@@ -90,7 +105,7 @@ public class Ship : MonoBehaviour
 
     }
 
-    public void Rotate(float amount)
+    public void Rotate( float amount )
     {
         if( amount != 0 )
         {

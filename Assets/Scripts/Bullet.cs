@@ -8,6 +8,8 @@ public class Bullet : MonoBehaviour
 
     public int Team;
     public int Damage;
+    public float Duration;
+    private float currentDuration;
 
     // Use this for initialization
     void Start()
@@ -18,7 +20,11 @@ public class Bullet : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-
+        currentDuration += Time.deltaTime;
+        if (currentDuration >= Duration)
+        {
+            Destroy( this.gameObject );
+        }
     }
 
     private void OnTriggerEnter( Collider other )
