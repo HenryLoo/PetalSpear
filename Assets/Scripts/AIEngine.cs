@@ -10,18 +10,27 @@ public class AIEngine : MonoBehaviour
 
     public Ship Ship;
     private float thrustAmount;
-    Vector3 thisToPlayer;
+    Vector3 thisToTarget;
+    private Rigidbody rb;
 
     public GameController Game;
+    private Vector3 targetPos;
     private Vector3 playerPos;
+    private Vector3 pickupPos;
     //private float playerRotation;
 
-    private bool isFiring = false;
+    private bool isFiringStandard = false;
+    private bool isFiringHeavy = false;
     public float FiringRadius = 45;
+
+    private float RETRY_SEEK_PICKUP_DURATION = 5;
+    private float retrySeekPickupTimer;
 
     enum AIBehaviour
     {
-        PursuePlayer
+        PursuePlayer,
+        SlowDown,
+        SeekPickup
     }
 
     enum HealthState
@@ -36,7 +45,7 @@ public class AIEngine : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-
+        rb = Ship.GetComponent<Rigidbody>();
     }
 
     // Update is called once per frame
@@ -55,17 +64,44 @@ public class AIEngine : MonoBehaviour
             //playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
         }
 
-        thisToPlayer = playerPos - transform.position;
+        if( Game.CurrentPickup )
+        {
+            pickupPos = Game.CurrentPickup.transform.position;
+        }
     }
 
     private void MakeDecision()
     {
-        if( ClassifyHealth( Ship.Health ) == HealthState.Healthy )
+        // TODO: replace arbitration with better decision weighting later.
+        if( Game.CurrentPickup )
+        {
+            targetPos = pickupPos;
+            if( currentBehaviour == AIBehaviour.SlowDown && Vector3.Magnitude( rb.velocity ) < 1 )
+            {
+                Ship.Thrust( 0 );
+                currentBehaviour = AIBehaviour.SeekPickup;
+            }
+            else if( currentBehaviour != AIBehaviour.SeekPickup || 
+                retrySeekPickupTimer >= RETRY_SEEK_PICKUP_DURATION )
+            {
+                currentBehaviour = AIBehaviour.SlowDown;
+                retrySeekPickupTimer = 0;
+            }
+            else if( currentBehaviour == AIBehaviour.SeekPickup)
+            {
+                retrySeekPickupTimer += Time.deltaTime;
+            }
+        }
+        else
         {
             currentBehaviour = AIBehaviour.PursuePlayer;
+            targetPos = playerPos;
         }
 
-        IsFiring();
+        thisToTarget = targetPos - transform.position;
+
+        isFiringHeavy = Ship.HeavyWeapon ? IsFiring( Ship.HeavyWeapon ) : false;
+        isFiringStandard = IsFiring( Ship.StandardWeapon );
     }
 
     private void Move()
@@ -74,21 +110,53 @@ public class AIEngine : MonoBehaviour
         {
             case AIBehaviour.PursuePlayer:
             {
-                FacePlayer();
+                FaceTarget();
                 Arrive();
                 Ship.Thrust( thrustAmount );
                 break;
             }
+
+            case AIBehaviour.SlowDown:
+            {
+                float angleDiff = SignedAngle( Ship.FrontVector, -rb.velocity, Vector3.up );
+                if( Mathf.Abs( angleDiff ) > 1 )
+                {
+                    float direction = Mathf.Sign( angleDiff );
+                    Ship.Rotate( direction );
+                }
+                else if( Vector3.Magnitude( rb.velocity ) > 0 )
+                {
+                    Ship.Thrust( 1 );
+                }
+                break;
+            }
+
+            case AIBehaviour.SeekPickup:
+            {
+                FaceTarget();
+                float angleDiff = Vector3.Angle( Ship.FrontVector, thisToTarget );
+                if( angleDiff < 5 )
+                {
+                    Ship.Thrust( 1 );
+                }
+                break;
+            }
         }
 
-        if( isFiring )
+        if( isFiringHeavy )
+        {
+            Ship.FireHeavy();
+        }
+        else if( isFiringStandard )
+        {
             Ship.FireStandard();
+        }
     }
 
     // Adjust thrust amount based on distance to player.
     private void Arrive()
     {
-        float dist = Vector3.Magnitude( thisToPlayer );
+        float dist = Vector3.Magnitude( thisToTarget );
         float targetThrustAmount = 0;
         if( dist > MaxSpeedRadius )
             targetThrustAmount = 1.0f;
@@ -97,7 +165,6 @@ public class AIEngine : MonoBehaviour
             targetThrustAmount = ( dist - ArrivalRadius ) / ( MaxSpeedRadius - ArrivalRadius );
         }
 
-
         // Adjust to match target thrust.
         if( thrustAmount < targetThrustAmount )
             thrustAmount += ThrustGain * Time.deltaTime;
@@ -105,11 +172,10 @@ public class AIEngine : MonoBehaviour
             thrustAmount -= ThrustGain * Time.deltaTime;
     }
 
-    private void FacePlayer()
+    private void FaceTarget()
     {
-        float direction = 0;
-        float angleDiff = SignedAngle( Ship.FrontVector, thisToPlayer, Vector3.up );
-        direction = Mathf.Sign( angleDiff );
+        float angleDiff = SignedAngle( Ship.FrontVector, thisToTarget, Vector3.up );
+        float direction = Mathf.Sign( angleDiff );
         Ship.Rotate( direction );
     }
 
@@ -123,12 +189,14 @@ public class AIEngine : MonoBehaviour
             return HealthState.Healthy;
     }
 
-    private void IsFiring()
+    private bool IsFiring( Weapon wpn )
     {
-        isFiring = Game.CurrentPlayer;
+        bool isFiring = Game.CurrentPlayer;
+        Vector3 thisToPlayer = playerPos - transform.position;
         isFiring &= Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius;
-        float bulletRange = Ship.StandardWeapon.BulletSpeed * Ship.StandardWeapon.BulletDuration;
+        float bulletRange = wpn.BulletSpeed * wpn.BulletDuration;
         isFiring &= Vector3.Magnitude( thisToPlayer ) <= bulletRange;
+        return isFiring;
     }
 
     // SignedAngle doesn't exist in this version of Unity.
