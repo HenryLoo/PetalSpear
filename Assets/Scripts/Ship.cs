@@ -140,4 +140,9 @@ public class Ship : MonoBehaviour
         text.text = HeavyWeapon.Name + " (" + HeavyWeapon.Ammo + "x)";
         text.GetComponent<TextDestroy>().Duration = PICKUP_TEXT_DURATION;
     }
+
+    public Vector3 GetVelocity()
+    {
+        return rb.velocity;
+    }
 }

@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -21,10 +22,15 @@ public class AIEngine : MonoBehaviour
 
     private bool isFiringStandard = false;
     private bool isFiringHeavy = false;
-    public float FiringRadius = 45;
+    public float FiringRadius = 90;
 
-    private float RETRY_SEEK_PICKUP_DURATION = 5;
+    private const float RETRY_SEEK_PICKUP_DURATION = 5;
     private float retrySeekPickupTimer;
+
+    private StateMachine states;
+    private const string STATE_PURSUE_PLAYER = "PursuePlayer";
+    private const string STATE_SLOW_DOWN = "SlowDown";
+    private const string STATE_SEEK_PICKUP = "SeekPickup";
 
     enum AIBehaviour
     {
@@ -46,6 +52,8 @@ public class AIEngine : MonoBehaviour
     void Start()
     {
         rb = Ship.GetComponent<Rigidbody>();
+
+        InitStateMachine();
     }
 
     // Update is called once per frame
@@ -58,12 +66,15 @@ public class AIEngine : MonoBehaviour
 
     private void GetWorldData()
     {
+        // Get player data.
         if( Game.CurrentPlayer )
         {
-            playerPos = Game.CurrentPlayer.transform.position;
+            Vector3 playerVel = Game.CurrentPlayer.GetVelocity() * Time.deltaTime;
+            playerPos = Game.CurrentPlayer.transform.position + playerVel;
             //playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
         }
 
+        // Get pickup data.
         if( Game.CurrentPickup )
         {
             pickupPos = Game.CurrentPickup.transform.position;
@@ -72,34 +83,17 @@ public class AIEngine : MonoBehaviour
 
     private void MakeDecision()
     {
-        // TODO: replace arbitration with better decision weighting later.
-        if( Game.CurrentPickup )
+        // Update the state machine and perform any available actions.
+        List<Action> actions = states.Update();
+        foreach( Action action in actions )
         {
-            targetPos = pickupPos;
-            if( currentBehaviour == AIBehaviour.SlowDown && Vector3.Magnitude( rb.velocity ) < 1 )
-            {
-                Ship.Thrust( 0 );
-                currentBehaviour = AIBehaviour.SeekPickup;
-            }
-            else if( currentBehaviour != AIBehaviour.SeekPickup || 
-                retrySeekPickupTimer >= RETRY_SEEK_PICKUP_DURATION )
-            {
-                currentBehaviour = AIBehaviour.SlowDown;
-                retrySeekPickupTimer = 0;
-            }
-            else if( currentBehaviour == AIBehaviour.SeekPickup)
-            {
-                retrySeekPickupTimer += Time.deltaTime;
-            }
-        }
-        else
-        {
-            currentBehaviour = AIBehaviour.PursuePlayer;
-            targetPos = playerPos;
+            action();
         }
 
+        // Calculate the vector to the target.
         thisToTarget = targetPos - transform.position;
 
+        // Fire weapons if available.
         isFiringHeavy = Ship.HeavyWeapon ? IsFiring( Ship.HeavyWeapon ) : false;
         isFiringStandard = IsFiring( Ship.StandardWeapon );
     }
@@ -209,5 +203,104 @@ public class AIEngine : MonoBehaviour
         float cross_z = from.x * to.y - from.y * to.x;
         float sign = Mathf.Sign( axis.x * cross_x + axis.y * cross_y + axis.z * cross_z );
         return unsignedAngle * sign;
+    }
+
+    private void InitStateMachine()
+    {
+        // Initialize state machine's states.
+        states = new StateMachine();
+
+        // Pursue player.
+        StateMachine.State statePursue = new StateMachine.State
+        {
+            EntryAction = () =>
+            {
+                currentBehaviour = AIBehaviour.PursuePlayer;
+            },
+
+            Action = () =>
+            {
+                targetPos = playerPos;
+            }
+        };
+
+        // Slow down.
+        StateMachine.State stateSlowDown = new StateMachine.State
+        {
+            EntryAction = () =>
+            {
+                currentBehaviour = AIBehaviour.SlowDown;
+                retrySeekPickupTimer = 0;
+            }
+        };
+        
+        // Seek pickup.
+        StateMachine.State statePickup = new StateMachine.State
+        {
+            EntryAction = () =>
+            {
+                currentBehaviour = AIBehaviour.SeekPickup;
+            },
+
+            Action = () =>
+            {
+                targetPos = pickupPos;
+                retrySeekPickupTimer += Time.deltaTime;
+            }
+        };
+
+        // Transition: Pursue player to slow down.
+        StateMachine.Transition pursueToSlowDown = new StateMachine.Transition
+        {
+            IsTriggered = () =>
+            {
+                return Game.CurrentPickup;
+            },
+            TargetState = STATE_SLOW_DOWN
+        };
+        statePursue.Transitions.Add( pursueToSlowDown );
+
+        // Transition: Slow down to pickup.
+        StateMachine.Transition slowDownToPickup = new StateMachine.Transition
+        {
+            IsTriggered = () =>
+            {
+                return Vector3.Magnitude( rb.velocity ) < 1;
+            },
+            Action = () =>
+            {
+                Ship.Thrust( 0 );
+            },
+            TargetState = STATE_SEEK_PICKUP
+        };
+        stateSlowDown.Transitions.Add( slowDownToPickup );
+
+        // Transition: Pickup was taken by the player.
+        StateMachine.Transition noPickup = new StateMachine.Transition
+        {
+            IsTriggered = () =>
+            {
+                return !Game.CurrentPickup;
+            },
+            TargetState = STATE_PURSUE_PLAYER
+        };
+        stateSlowDown.Transitions.Add( noPickup );
+        statePickup.Transitions.Add( noPickup );
+
+        // Transition: Retry seek pickup if timed out.
+        StateMachine.Transition retrySeekPickup = new StateMachine.Transition
+        {
+            IsTriggered = () =>
+            {
+                return retrySeekPickupTimer >= RETRY_SEEK_PICKUP_DURATION;
+            },
+            TargetState = STATE_SLOW_DOWN
+        };
+        statePickup.Transitions.Add( retrySeekPickup );
+
+        // Add the states to the state machine.
+        states.AddState( STATE_PURSUE_PLAYER, statePursue );
+        states.AddState( STATE_SLOW_DOWN, stateSlowDown );
+        states.AddState( STATE_SEEK_PICKUP, statePickup );
     }
 }
