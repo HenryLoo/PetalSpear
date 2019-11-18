@@ -28,16 +28,32 @@ public class AIEngine : MonoBehaviour
     private float retrySeekPickupTimer;
 
     private StateMachine states;
-    private const string STATE_PURSUE_PLAYER = "PursuePlayer";
-    private const string STATE_SLOW_DOWN = "SlowDown";
-    private const string STATE_SEEK_PICKUP = "SeekPickup";
+
+    private const string STATE_UNARMED = "Unarmed";
+    private const string STATE_ARMED = "Armed";
+    private const string GOAL_KILL_PLAYER = "KillPlayer";
+    private const string GOAL_GET_ARMED = "GetArmed";
+    private const string ACTION_PURSUE_PLAYER = "PursuePlayer";
+    private const string ACTION_SEEK_PICKUP = "SeekPickup";
+
+    private const int VALUE_KILL_PLAYER = 1;
+    private const int VALUE_GET_ARMED = 0;
+    private const int VALUE_GET_ARMED_PRIORITY = 2;
+
+    private const int INSISTENCE_PURSUE_PLAYER = -1;
+    private const int INSISTENCE_SEEK_PICKUP = -2;
+
+    private Dictionary<string, AIBehaviour> actionToBehaviour = new Dictionary<string, AIBehaviour>
+    {
+        { ACTION_PURSUE_PLAYER, AIBehaviour.PursuePlayer },
+        { ACTION_SEEK_PICKUP, AIBehaviour.SeekPickup },
+    };
 
     private GoalOrientedBehaviour.OverallUtility gob;
 
     enum AIBehaviour
     {
         PursuePlayer,
-        SlowDown,
         SeekPickup
     }
 
@@ -55,6 +71,7 @@ public class AIEngine : MonoBehaviour
     {
         rb = Ship.GetComponent<Rigidbody>();
 
+        InitGOB();
         InitStateMachine();
     }
 
@@ -106,36 +123,58 @@ public class AIEngine : MonoBehaviour
         {
             case AIBehaviour.PursuePlayer:
             {
+                retrySeekPickupTimer = 0;
+                targetPos = playerPos;
                 FaceTarget();
                 Arrive();
                 Ship.Thrust( thrustAmount );
                 break;
             }
 
-            case AIBehaviour.SlowDown:
-            {
-                float angleDiff = SignedAngle( Ship.FrontVector, -rb.velocity, Vector3.up );
-                if( Mathf.Abs( angleDiff ) > 1 )
-                {
-                    float direction = Mathf.Sign( angleDiff );
-                    Ship.Rotate( direction );
-                }
-                else if( Vector3.Magnitude( rb.velocity ) > 0 )
-                {
-                    Ship.Thrust( 1 );
-                }
-                break;
-            }
-
             case AIBehaviour.SeekPickup:
             {
-                FaceTarget();
-                float angleDiff = Vector3.Angle( Ship.FrontVector, thisToTarget );
-                if( angleDiff < 5 )
+                // Slow down. This occurs at the beginning to realign and prepare
+                // to move toward the weapon pickup. This also occurs again if
+                // it takes too long to pick up the weapon, to break stalling.
+                if( Vector3.Magnitude( rb.velocity ) >= 1 && retrySeekPickupTimer == 0 )
                 {
-                    Ship.Thrust( 1 );
+                    float angleDiff = SignedAngle( Ship.FrontVector, -rb.velocity, Vector3.up );
+                    if( Mathf.Abs( angleDiff ) > 1 )
+                    {
+                        float direction = Mathf.Sign( angleDiff );
+                        Ship.Rotate( direction );
+                    }
+                    else
+                    {
+                        Ship.Thrust( 1 );
+                    }
+                    break;
                 }
-                break;
+                // Try to pick up the weapon.
+                else
+                {
+                    // Just starting to move toward pickup, so reinitialize thrust.
+                    if( retrySeekPickupTimer == 0 )
+                    {
+                        Ship.Thrust( 0 );
+                    }
+
+                    // If stalling too long, we need to stop and realign to try again.
+                    retrySeekPickupTimer += Time.deltaTime;
+                    if( retrySeekPickupTimer >= RETRY_SEEK_PICKUP_DURATION )
+                    {
+                        retrySeekPickupTimer = 0;
+                    }
+
+                    targetPos = pickupPos;
+                    FaceTarget();
+                    float angleDiff = Vector3.Angle( Ship.FrontVector, thisToTarget );
+                    if( angleDiff < 5 )
+                    {
+                        Ship.Thrust( 1 );
+                    }
+                    break;
+                }
             }
         }
 
@@ -207,102 +246,168 @@ public class AIEngine : MonoBehaviour
         return unsignedAngle * sign;
     }
 
+    private void InitGOB()
+    {
+
+        // Initialize goal oriented behaviour handler.
+        gob = new GoalOrientedBehaviour.OverallUtility();
+
+        // Initialize goals.
+        List<GoalOrientedBehaviour.Goal> goals = new List<GoalOrientedBehaviour.Goal>();
+
+        // Goal: Kill player.
+        GoalOrientedBehaviour.Goal killPlayer = new GoalOrientedBehaviour.Goal
+        {
+            Name = GOAL_KILL_PLAYER,
+            Value = 0
+        };
+        goals.Add( killPlayer );
+
+        // Goal: Get armed.
+        GoalOrientedBehaviour.Goal getArmed = new GoalOrientedBehaviour.Goal
+        {
+            Name = GOAL_GET_ARMED,
+            Value = 0
+        };
+        goals.Add( getArmed );
+
+        gob.Goals = goals;
+
+        // Initialize actions.
+        List<GoalOrientedBehaviour.Action> actions = new List<GoalOrientedBehaviour.Action>();
+
+        // Action: Pursue player.
+        GoalOrientedBehaviour.Action pursuePlayer = new GoalOrientedBehaviour.Action
+        {
+            Name = ACTION_PURSUE_PLAYER,
+            Insistences = new Dictionary<string, int>
+            {
+                { GOAL_KILL_PLAYER, INSISTENCE_PURSUE_PLAYER },
+                { GOAL_GET_ARMED, 0 }
+            }
+        };
+        actions.Add( pursuePlayer );
+
+        // Action: Seek pickup.
+        GoalOrientedBehaviour.Action seekPickup = new GoalOrientedBehaviour.Action
+        {
+            Name = ACTION_SEEK_PICKUP,
+            Insistences = new Dictionary<string, int>
+            {
+                { GOAL_KILL_PLAYER, 0 },
+                { GOAL_GET_ARMED, INSISTENCE_SEEK_PICKUP }
+            }
+        };
+        actions.Add( seekPickup );
+
+        gob.Actions = actions;
+    }
+
     private void InitStateMachine()
     {
         // Initialize state machine's states.
         states = new StateMachine();
 
-        // Pursue player.
-        StateMachine.State statePursue = new StateMachine.State
+        // Unarmed state.
+        StateMachine.State stateUnarmed = new StateMachine.State
         {
             EntryAction = () =>
             {
-                currentBehaviour = AIBehaviour.PursuePlayer;
+                // Change "kill player" goal value.
+                GoalOrientedBehaviour.Goal killPlayer = new GoalOrientedBehaviour.Goal
+                {
+                    Name = GOAL_KILL_PLAYER,
+                    Value = VALUE_KILL_PLAYER
+                };
+                gob.Goals[ 0 ] = killPlayer;
             },
 
             Action = () =>
             {
-                targetPos = playerPos;
+                // Change "get armed" goal value.
+                int getArmedVal = Game.CurrentPickup ?
+                    VALUE_GET_ARMED_PRIORITY : VALUE_GET_ARMED;
+                if( getArmedVal != gob.Goals[ 1 ].Value )
+                {
+                    GoalOrientedBehaviour.Goal getArmed = new GoalOrientedBehaviour.Goal
+                    {
+                        Name = GOAL_GET_ARMED,
+                        Value = getArmedVal
+                    };
+                    gob.Goals[ 1 ] = getArmed;
+                }
+
+                UpdateCurrentBehaviour();
             }
         };
 
-        // Slow down.
-        StateMachine.State stateSlowDown = new StateMachine.State
+        // Armed state.
+        StateMachine.State stateArmed = new StateMachine.State
         {
             EntryAction = () =>
             {
-                currentBehaviour = AIBehaviour.SlowDown;
-                retrySeekPickupTimer = 0;
-            }
-        };
-        
-        // Seek pickup.
-        StateMachine.State statePickup = new StateMachine.State
-        {
-            EntryAction = () =>
-            {
-                currentBehaviour = AIBehaviour.SeekPickup;
+                // Change "kill player" goal value.
+                GoalOrientedBehaviour.Goal killPlayer = new GoalOrientedBehaviour.Goal
+                {
+                    Name = GOAL_KILL_PLAYER,
+                    Value = VALUE_KILL_PLAYER
+                };
+                gob.Goals[ 0 ] = killPlayer;
             },
 
             Action = () =>
             {
-                targetPos = pickupPos;
-                retrySeekPickupTimer += Time.deltaTime;
+                // Change "get armed" goal value.
+                // Try to deny the player if they are unarmed.
+                int getArmedVal = !Game.CurrentPlayer.HeavyWeapon ?
+                    VALUE_GET_ARMED_PRIORITY : VALUE_GET_ARMED;
+
+                if( getArmedVal != gob.Goals[ 1 ].Value )
+                {
+                    GoalOrientedBehaviour.Goal getArmed = new GoalOrientedBehaviour.Goal
+                    {
+                        Name = GOAL_GET_ARMED,
+                        Value = getArmedVal
+                    };
+                    gob.Goals[ 1 ] = getArmed;
+                }
+
+                UpdateCurrentBehaviour();
             }
         };
 
-        // Transition: Pursue player to slow down.
-        StateMachine.Transition pursueToSlowDown = new StateMachine.Transition
+        // Transition: unarmed to armed.
+        StateMachine.Transition unarmedToArmed = new StateMachine.Transition()
         {
+            TargetState = STATE_ARMED,
             IsTriggered = () =>
             {
-                return Game.CurrentPickup;
-            },
-            TargetState = STATE_SLOW_DOWN
+                return Ship.HeavyWeapon;
+            }
         };
-        statePursue.Transitions.Add( pursueToSlowDown );
+        stateUnarmed.Transitions.Add( unarmedToArmed );
 
-        // Transition: Slow down to pickup.
-        StateMachine.Transition slowDownToPickup = new StateMachine.Transition
+        // Transition: armed to unarmed.
+        StateMachine.Transition armedToUnarmed = new StateMachine.Transition()
         {
+            TargetState = STATE_UNARMED,
             IsTriggered = () =>
             {
-                return Vector3.Magnitude( rb.velocity ) < 1;
-            },
-            Action = () =>
-            {
-                Ship.Thrust( 0 );
-            },
-            TargetState = STATE_SEEK_PICKUP
+                return !Ship.HeavyWeapon;
+            }
         };
-        stateSlowDown.Transitions.Add( slowDownToPickup );
+        stateArmed.Transitions.Add( armedToUnarmed );
 
-        // Transition: Pickup was taken by the player.
-        StateMachine.Transition noPickup = new StateMachine.Transition
-        {
-            IsTriggered = () =>
-            {
-                return !Game.CurrentPickup;
-            },
-            TargetState = STATE_PURSUE_PLAYER
-        };
-        stateSlowDown.Transitions.Add( noPickup );
-        statePickup.Transitions.Add( noPickup );
+        // Add states to the state machine.
+        states.AddState( STATE_UNARMED, stateUnarmed );
+        states.AddState( STATE_ARMED, stateArmed );
+    }
 
-        // Transition: Retry seek pickup if timed out.
-        StateMachine.Transition retrySeekPickup = new StateMachine.Transition
-        {
-            IsTriggered = () =>
-            {
-                return retrySeekPickupTimer >= RETRY_SEEK_PICKUP_DURATION;
-            },
-            TargetState = STATE_SLOW_DOWN
-        };
-        statePickup.Transitions.Add( retrySeekPickup );
-
-        // Add the states to the state machine.
-        states.AddState( STATE_PURSUE_PLAYER, statePursue );
-        states.AddState( STATE_SLOW_DOWN, stateSlowDown );
-        states.AddState( STATE_SEEK_PICKUP, statePickup );
+    public void UpdateCurrentBehaviour()
+    {
+        GoalOrientedBehaviour.Action action = gob.ChooseAction();
+        AIBehaviour behaviour;
+        actionToBehaviour.TryGetValue( action.Name, out behaviour );
+        currentBehaviour = behaviour;
     }
 }

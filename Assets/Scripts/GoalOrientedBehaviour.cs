@@ -16,13 +16,16 @@ namespace GoalOrientedBehaviour
 
     struct Action
     {
-        public Dictionary<string, int> Insistences;
+        public string Name;
+
+        public Dictionary<string, int> Insistences { get; set; }
 
         // Return the change in insistence that carrying this action would 
         // give.
         public int GetGoalChange( Goal goal )
         {
-            Insistences.TryGetValue( goal.Name, out int value );
+            int value = 0;
+            Insistences.TryGetValue( goal.Name, out value );
             return value;
         }
     }
@@ -41,8 +44,7 @@ namespace GoalOrientedBehaviour
             foreach( Action action in Actions )
             {
                 int thisValue = calculateDiscontentment( action );
-                if( thisValue < bestValue ||
-                    ( thisValue == bestValue && Random.Range( 0, 1 ) < 0.5 ) )
+                if( thisValue < bestValue )
                 {
                     bestValue = thisValue;
                     bestAction = action;
@@ -62,14 +64,15 @@ namespace GoalOrientedBehaviour
             foreach( Goal goal in Goals )
             {
                 // Calculate the new value after the action.
-                int newValue = goal.Value + action.GetGoalChange( goal );
+                // Total discontentment cannot go below 0.
+                int newValue = Mathf.Max( 0, goal.Value + action.GetGoalChange( goal ) );
+                //Debug.Log( action.Name + ": " + goal.Name + " " + goal.Value + " + " + action.GetGoalChange( goal ) );
 
                 // Get the discontentment of this value.
                 discontentment += Goal.GetDiscontentment( newValue );
             }
 
-            // Total discontentment cannot go below 0.
-            return Mathf.Max( 0, discontentment );
+            return discontentment;
         }
     }
 }
