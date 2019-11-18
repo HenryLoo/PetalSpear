@@ -32,6 +32,8 @@ public class AIEngine : MonoBehaviour
     private const string STATE_SLOW_DOWN = "SlowDown";
     private const string STATE_SEEK_PICKUP = "SeekPickup";
 
+    private GoalOrientedBehaviour.OverallUtility gob;
+
     enum AIBehaviour
     {
         PursuePlayer,
