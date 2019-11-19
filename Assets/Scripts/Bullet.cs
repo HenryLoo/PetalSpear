@@ -5,9 +5,11 @@ using UnityEngine;
 public class Bullet : MonoBehaviour
 {
     public GameObject HitSpark;
+    public BlastZone BlastZone;
 
     public int Team;
     public int Damage;
+    public float BlastSize;
     public float Duration;
     private float currentDuration;
 
@@ -23,6 +25,8 @@ public class Bullet : MonoBehaviour
         currentDuration += Time.deltaTime;
         if (currentDuration >= Duration)
         {
+            if( TriggerBlast() )
+                ProcessHitSpark();
             Destroy( this.gameObject );
         }
     }
@@ -31,6 +35,7 @@ public class Bullet : MonoBehaviour
     {
         if( other.gameObject.tag == "Wall" )
         {
+            TriggerBlast();
             ProcessHitSpark();
             return;
         }
@@ -38,7 +43,9 @@ public class Bullet : MonoBehaviour
         Ship otherShip = other.gameObject.GetComponent<Ship>();
         if( otherShip && otherShip.Team != Team  && otherShip.InvincibilityTimer == 0)
         {
-            otherShip.Health -= Damage;
+            // If explosive, don't deal damage on contact.
+            if( !TriggerBlast() )
+                otherShip.Health -= Damage;
             ProcessHitSpark();
             return;
         }
@@ -48,5 +55,17 @@ public class Bullet : MonoBehaviour
     {
         Instantiate( HitSpark, transform.position, transform.rotation );
         Destroy( this.gameObject );
+    }
+
+    private bool TriggerBlast()
+    {
+        if( BlastSize == 0 )
+            return false;
+
+        BlastZone blast = (BlastZone) Instantiate( BlastZone, transform.position, transform.rotation );
+        blast.Team = Team;
+        blast.Damage = Damage;
+        blast.gameObject.transform.localScale = new Vector3( BlastSize, BlastSize, BlastSize );
+        return true;
     }
 }

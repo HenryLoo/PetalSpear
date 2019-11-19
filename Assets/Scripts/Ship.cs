@@ -154,6 +154,10 @@ public class Ship : MonoBehaviour
 
     public void PickUpWeapon( WeaponTypes.Type type )
     {
+        // Replace existing weapon.
+        if( HeavyWeapon )
+            Destroy( HeavyWeapon.gameObject );
+
         Weapon heavy = WeaponTypes.GetWeapon( type );
         HeavyWeapon = ( Weapon ) Instantiate( heavy, transform.position, transform.rotation );
         HeavyWeapon.transform.SetParent( transform );

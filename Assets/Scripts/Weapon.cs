@@ -13,10 +13,12 @@ public class Weapon : MonoBehaviour
     public float BulletSize;
     public int NumBullets;
     public float SpreadAngle;
+    public bool IsRandomSpread;
     public float BulletsPerSecond;
     private float currentFireDelay;
     public int Ammo;
     public bool IsAffectedByShipVel;
+    public float BlastSize;
     private AudioSource fireSound;
     public GameObject HitSpark;
 
@@ -69,20 +71,40 @@ public class Weapon : MonoBehaviour
 
             for( int i = 0; i < NumBullets; ++i )
             {
-                Rigidbody bulletInstance = ( Rigidbody ) Instantiate( Bullet, position, transform.rotation );
-                bulletInstance.velocity = currentDir * BulletSpeed;
+                Vector3 thisDir = currentDir;
+                if( IsRandomSpread )
+                {
+                    Quaternion rot = Quaternion.Euler( new Vector3( 0, Random.Range( -SpreadAngle, SpreadAngle ), 0 ) );
+                    thisDir = rot * thisDir;
+                }
+
+                // Push the bullet's position forward by half its radius.
+                Vector3 pos = position + thisDir.normalized * Bullet.transform.localScale.x * BulletSize / 2;
+                Rigidbody bulletInstance = ( Rigidbody ) Instantiate( Bullet, pos, transform.rotation );
+
+                // Apply bullet properties.
+                bulletInstance.velocity = thisDir * BulletSpeed;
                 if( IsAffectedByShipVel )
                     bulletInstance.velocity = bulletInstance.velocity + currentVelocity / 3;
+
                 Bullet bullet = bulletInstance.GetComponent<Bullet>();
                 bullet.Team = team;
                 bullet.Damage = BulletDamage;
                 bullet.GetComponent<Renderer>().material.SetColor( "_Color", Colour );
                 bullet.transform.localScale = bullet.transform.localScale * BulletSize;
                 bullet.HitSpark = HitSpark;
+                bullet.BlastSize = BlastSize;
                 bullet.Duration = BulletDuration;
+
+                // Edit trail size and colour.
                 TrailRenderer trail = bullet.GetComponent<TrailRenderer>();
                 trail.material.color = Colour;
-                trail.widthMultiplier = trail.widthMultiplier * BulletSize * 2;
+                AnimationCurve trailCurve = new AnimationCurve();
+                trailCurve.AddKey( 0, BulletSize );
+                trailCurve.AddKey( 1, 0 );
+                trail.widthCurve = trailCurve;
+
+                // Calculate the next bullet's direction.
                 currentDir = Quaternion.Euler( 0, SpreadAngle, 0 ) * currentDir;
             }
 
