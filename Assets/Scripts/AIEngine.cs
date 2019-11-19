@@ -179,7 +179,7 @@ public class AIEngine : MonoBehaviour
         }
 
         // Don't waste ammo if the player is invincible.
-        if( isFiringHeavy && Game.CurrentPlayer.InvincibilityTimer == 0)
+        if( isFiringHeavy && Game.CurrentPlayer.InvincibilityTimer == 0 )
         {
             Ship.FireHeavy();
         }
@@ -360,7 +360,7 @@ public class AIEngine : MonoBehaviour
             {
                 // Change "get armed" goal value.
                 // Try to deny the player if they are unarmed.
-                int getArmedVal = !Game.CurrentPlayer.HeavyWeapon ?
+                int getArmedVal = ( !Game.CurrentPlayer.HeavyWeapon && Game.CurrentPickup ) ?
                     VALUE_GET_ARMED_PRIORITY : VALUE_GET_ARMED;
 
                 if( getArmedVal != gob.Goals[ 1 ].Value )

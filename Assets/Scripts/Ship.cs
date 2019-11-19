@@ -82,8 +82,7 @@ public class Ship : MonoBehaviour
 
         if( Health <= 0 )
         {
-            Instantiate( Explosion, transform.position, transform.rotation );
-            Destroy( this.gameObject );
+            Die();
         }
 
         if( InvincibilityTimer > 0 )
@@ -174,5 +173,10 @@ public class Ship : MonoBehaviour
         Color newCol = rend.material.color;
         newCol.a = a;
         rend.material.color = newCol;
+    }
+    public void Die()
+    {
+        Instantiate( Explosion, transform.position, transform.rotation );
+        Destroy( this.gameObject );
     }
 }

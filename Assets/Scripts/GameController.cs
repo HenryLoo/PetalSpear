@@ -1,6 +1,8 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class GameController : MonoBehaviour
 {
@@ -13,6 +15,11 @@ public class GameController : MonoBehaviour
     public float OpponentSpawnRot = 180;
 
     public float ShipSpawnDelay;
+    public Vector2 WeaponSpawnRateRange;
+
+    public float GameDuration;
+    public float InvincibilityDuration;
+
     private float playerSpawnTimer;
     private float opponentSpawnTimer;
     private bool isReadyToSpawnPlayer = true;
@@ -21,7 +28,6 @@ public class GameController : MonoBehaviour
 
     public WeaponPickup WeaponPickup;
     private WeaponTypes weaponTypes;
-    public Vector2 WeaponSpawnRateRange;
     private float weaponSpawnTimer;
     private bool isReadyToSpawnWeapon = true;
 
@@ -42,13 +48,37 @@ public class GameController : MonoBehaviour
     private Vector3 opponentPos;
 
     public Canvas TitleUI;
-    private bool hasGameStarted = false;
 
-    public float InvincibilityDuration;
+    public Canvas GameUI;
+    public Text TimeText;
+    public Text PlayerScoreText;
+    public Text OpponentScoreText;
+    private float gameTime;
+    private int playerScore;
+    private int opponentScore;
+
+    public Canvas EndUI;
+    public Text WinText;
+    private const string PLAYER_WIN = "PLAYER WINS!";
+    private const string OPPONENT_WIN = "AI WINS!";
+    private const string NO_WIN = "TIE GAME!";
+    private AudioSource endSound;
+
+    private GameState currentState = GameState.Title;
+
+    enum GameState
+    {
+        Title,
+        Playing,
+        Ended
+    }
 
     void Awake()
     {
         weaponTypes = GetComponent<WeaponTypes>();
+        GameUI.enabled = false;
+        EndUI.enabled = false;
+        endSound = GetComponent<AudioSource>();
     }
 
     // Use this for initialization
@@ -61,96 +91,160 @@ public class GameController : MonoBehaviour
     void Update()
     {
         // Title screen.
-        if( !hasGameStarted )
+        switch(currentState)
         {
-            float fire = Input.GetAxis( "Fire1" );
-            if( fire != 0 )
-                StartGame();
-        }
-        // Game logic.
-        else
-        {
-            if( !CurrentPickup )
+            case GameState.Title:
             {
-                if( isReadyToSpawnWeapon )
+                // Slowly rotate camera.
+                GameCamera.transform.rotation *= Quaternion.Euler( new Vector3( 0, 0, Time.deltaTime ) );
+
+                bool fire = Input.GetButtonDown( "Fire1" );
+                if( fire )
+                    StartGame();
+                break;
+            }
+
+            case GameState.Playing:
+            {
+                // Update game time.
+                UpdateTime();
+
+                if( !CurrentPickup )
                 {
-                    ResetWeaponSpawnTimer();
-                    isReadyToSpawnWeapon = false;
+                    if( isReadyToSpawnWeapon )
+                    {
+                        ResetWeaponSpawnTimer();
+                        isReadyToSpawnWeapon = false;
+                    }
+
+                    if( weaponSpawnTimer > 0 )
+                    {
+                        weaponSpawnTimer -= Time.deltaTime;
+                    }
+                    else
+                    {
+                        SpawnWeapon();
+                        isReadyToSpawnWeapon = true;
+                    }
                 }
 
-                if( weaponSpawnTimer > 0 )
+                if( CurrentPlayer )
                 {
-                    weaponSpawnTimer -= Time.deltaTime;
+                    playerPos = CurrentPlayer.transform.position;
                 }
                 else
                 {
-                    SpawnWeapon();
-                    isReadyToSpawnWeapon = true;
-                }
-            }
+                    if( isReadyToSpawnPlayer )
+                    {
+                        playerSpawnTimer = ShipSpawnDelay;
+                        isReadyToSpawnPlayer = false;
+                        playerDestroyed = CreateRedText( playerPos );
 
-            if( CurrentPlayer )
-            {
-                playerPos = CurrentPlayer.transform.position;
-            }
-            else
-            {
-                if( isReadyToSpawnPlayer )
-                {
-                    playerSpawnTimer = ShipSpawnDelay;
-                    isReadyToSpawnPlayer = false;
-                    playerDestroyed = CreateRedText( playerPos );
+                        // Player just died.
+                        ++opponentScore;
+                        UpdateScore();
+                    }
+
+                    if( playerSpawnTimer > 0 )
+                    {
+                        playerSpawnTimer -= Time.deltaTime;
+                        playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
+                    }
+                    else
+                    {
+                        SpawnPlayer( true );
+                        isReadyToSpawnPlayer = true;
+                    }
                 }
 
-                if( playerSpawnTimer > 0 )
+                if( currentOpponent )
                 {
-                    playerSpawnTimer -= Time.deltaTime;
-                    playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
+                    opponentPos = currentOpponent.transform.position;
                 }
                 else
                 {
-                    SpawnPlayer( true );
-                    isReadyToSpawnPlayer = true;
+                    if( isReadyToSpawnOpponent )
+                    {
+                        opponentSpawnTimer = ShipSpawnDelay;
+                        isReadyToSpawnOpponent = false;
+                        opponentDestroyed = CreateRedText( opponentPos );
+
+                        // Opponent just died.
+                        ++playerScore;
+                        UpdateScore();
+                    }
+
+                    if( opponentSpawnTimer > 0 )
+                    {
+                        opponentSpawnTimer -= Time.deltaTime;
+                        opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
+                    }
+                    else
+                    {
+                        SpawnOpponent( true );
+                        isReadyToSpawnOpponent = true;
+                    }
                 }
+
+                break;
             }
 
-            if( currentOpponent )
+            case GameState.Ended:
             {
-                opponentPos = currentOpponent.transform.position;
-            }
-            else
-            {
-                if( isReadyToSpawnOpponent )
-                {
-                    opponentSpawnTimer = ShipSpawnDelay;
-                    isReadyToSpawnOpponent = false;
-                    opponentDestroyed = CreateRedText( opponentPos );
-                }
-
-                if( opponentSpawnTimer > 0 )
-                {
-                    opponentSpawnTimer -= Time.deltaTime;
-                    opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
-                }
-                else
-                {
-                    SpawnOpponent( true );
-                    isReadyToSpawnOpponent = true;
-                }
+                bool fire = Input.GetButtonDown( "Fire1" );
+                if( fire )
+                    ResetTitle();
+                break;
             }
         }
     }
 
+    private void ResetTitle()
+    {
+        currentState = GameState.Title;
+
+        // Show title screen.
+        TitleUI.enabled = true;
+
+        // Hide game UI.
+        GameUI.enabled = false;
+
+        // Hide end UI.
+        EndUI.enabled = false;
+
+        // Delete existing objects.
+        if( currentOpponent )
+            Destroy( currentOpponent.gameObject );
+        if( CurrentPlayer )
+            Destroy( CurrentPlayer.gameObject );
+        if( CurrentPickup )
+            Destroy( CurrentPickup.gameObject );
+    }
+
     private void StartGame()
     {
-        // Hide title screen.
-        if( TitleUI.enabled )
-            TitleUI.enabled = false;
+        currentState = GameState.Playing;
 
+        // Hide title screen.
+        TitleUI.enabled = false;
+
+        // Show game UI.
+        GameUI.enabled = true;
+
+        // Reset scores.
+        playerScore = 0;
+        opponentScore = 0;
+
+        // Reset timers.
+        ResetWeaponSpawnTimer();
+        gameTime = GameDuration;
+
+        // Spawn ships.
         SpawnPlayer( false );
         SpawnOpponent( false );
-        ResetWeaponSpawnTimer();
-        hasGameStarted = true;
+
+        // Reset camera rotation.
+        GameCamera.transform.rotation = Quaternion.Euler( 90, 0, 0 );
     }
 
     private void SpawnWeapon()
@@ -208,19 +302,19 @@ public class GameController : MonoBehaviour
 
     private Vector3 GetRandomPosition()
     {
-        float x = Random.Range( LevelXBounds.x, LevelXBounds.y );
-        float z = Random.Range( LevelZBounds.x, LevelZBounds.y );
+        float x = UnityEngine.Random.Range( LevelXBounds.x, LevelXBounds.y );
+        float z = UnityEngine.Random.Range( LevelZBounds.x, LevelZBounds.y );
         return new Vector3( x, 0, z );
     }
 
     private Quaternion GetRandomRotation()
     {
-        return Quaternion.Euler( 90, Random.Range( 0, 360 ), 0 );
+        return Quaternion.Euler( 90, UnityEngine.Random.Range( 0, 360 ), 0 );
     }
 
     public void ResetWeaponSpawnTimer()
     {
-        weaponSpawnTimer = Random.Range( WeaponSpawnRateRange.x, WeaponSpawnRateRange.y );
+        weaponSpawnTimer = UnityEngine.Random.Range( WeaponSpawnRateRange.x, WeaponSpawnRateRange.y );
     }
 
     private TextMesh CreateRedText( Vector3 position )
@@ -228,5 +322,58 @@ public class GameController : MonoBehaviour
         TextMesh text = Instantiate( RedText, position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
         text.GetComponent<TextDestroy>().Duration = ShipSpawnDelay;
         return text;
+    }
+
+    private void UpdateScore()
+    {
+        PlayerScoreText.text = playerScore.ToString();
+        OpponentScoreText.text = opponentScore.ToString();
+    }
+
+    private void UpdateTime()
+    {
+        gameTime -= Time.deltaTime;
+        TimeSpan timeSpan = TimeSpan.FromSeconds( gameTime );
+        string timeText = string.Format( "{0:D2}:{1:D2}", timeSpan.Minutes, timeSpan.Seconds );
+        TimeText.text = timeText;
+
+        // Time is up, so end the game.
+        if( gameTime <= 0 )
+        {
+            gameTime = 0;
+            currentState = GameState.Ended;
+            endSound.Play();
+
+            EndUI.enabled = true;
+            string msg;
+            // Player wins.
+            if( playerScore > opponentScore )
+            {
+                msg = PLAYER_WIN;
+                if( currentOpponent )
+                    currentOpponent.Die();
+            }
+            // Opponent wins.
+            else if( opponentScore > playerScore )
+            {
+                msg = OPPONENT_WIN;
+                if( CurrentPlayer )
+                    CurrentPlayer.Die();
+            }
+            // Nobody wins.
+            else
+            {
+                msg = NO_WIN;
+                if( currentOpponent )
+                    currentOpponent.Die();
+                if( CurrentPlayer )
+                    CurrentPlayer.Die();
+            }
+
+            if( CurrentPickup )
+                Destroy( CurrentPickup.gameObject );
+
+            WinText.text = msg;
+        }
     }
 }

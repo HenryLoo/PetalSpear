@@ -12,7 +12,7 @@ public class Player : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-
+        Input.ResetInputAxes();
     }
 
     // Update is called once per frame
