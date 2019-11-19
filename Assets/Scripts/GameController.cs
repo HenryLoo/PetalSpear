@@ -53,9 +53,14 @@ public class GameController : MonoBehaviour
     public Text TimeText;
     public Text PlayerScoreText;
     public Text OpponentScoreText;
+    public Text PlayerWeaponText;
+    public Text OpponentWeaponText;
     private float gameTime;
     private int playerScore;
     private int opponentScore;
+    public RectTransform PlayerHealth;
+    public RectTransform OpponentHealth;
+    public float maxBarWidth;
 
     public Canvas EndUI;
     public Text WinText;
@@ -79,6 +84,7 @@ public class GameController : MonoBehaviour
         GameUI.enabled = false;
         EndUI.enabled = false;
         endSound = GetComponent<AudioSource>();
+        maxBarWidth = PlayerHealth.rect.width;
     }
 
     // Use this for initialization
@@ -95,108 +101,128 @@ public class GameController : MonoBehaviour
         {
             case GameState.Title:
             {
-                // Slowly rotate camera.
-                GameCamera.transform.rotation *= Quaternion.Euler( new Vector3( 0, 0, Time.deltaTime ) );
-
-                bool fire = Input.GetButtonDown( "Fire1" );
-                if( fire )
-                    StartGame();
+                UpdateTitle();
                 break;
             }
 
             case GameState.Playing:
             {
-                // Update game time.
-                UpdateTime();
-
-                if( !CurrentPickup )
-                {
-                    if( isReadyToSpawnWeapon )
-                    {
-                        ResetWeaponSpawnTimer();
-                        isReadyToSpawnWeapon = false;
-                    }
-
-                    if( weaponSpawnTimer > 0 )
-                    {
-                        weaponSpawnTimer -= Time.deltaTime;
-                    }
-                    else
-                    {
-                        SpawnWeapon();
-                        isReadyToSpawnWeapon = true;
-                    }
-                }
-
-                if( CurrentPlayer )
-                {
-                    playerPos = CurrentPlayer.transform.position;
-                }
-                else
-                {
-                    if( isReadyToSpawnPlayer )
-                    {
-                        playerSpawnTimer = ShipSpawnDelay;
-                        isReadyToSpawnPlayer = false;
-                        playerDestroyed = CreateRedText( playerPos );
-
-                        // Player just died.
-                        ++opponentScore;
-                        UpdateScore();
-                    }
-
-                    if( playerSpawnTimer > 0 )
-                    {
-                        playerSpawnTimer -= Time.deltaTime;
-                        playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
-                    }
-                    else
-                    {
-                        SpawnPlayer( true );
-                        isReadyToSpawnPlayer = true;
-                    }
-                }
-
-                if( currentOpponent )
-                {
-                    opponentPos = currentOpponent.transform.position;
-                }
-                else
-                {
-                    if( isReadyToSpawnOpponent )
-                    {
-                        opponentSpawnTimer = ShipSpawnDelay;
-                        isReadyToSpawnOpponent = false;
-                        opponentDestroyed = CreateRedText( opponentPos );
-
-                        // Opponent just died.
-                        ++playerScore;
-                        UpdateScore();
-                    }
-
-                    if( opponentSpawnTimer > 0 )
-                    {
-                        opponentSpawnTimer -= Time.deltaTime;
-                        opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
-                    }
-                    else
-                    {
-                        SpawnOpponent( true );
-                        isReadyToSpawnOpponent = true;
-                    }
-                }
-
+                UpdatePlaying();
                 break;
             }
 
             case GameState.Ended:
             {
-                bool fire = Input.GetButtonDown( "Fire1" );
-                if( fire )
-                    ResetTitle();
+                UpdateEnded();
                 break;
             }
         }
+    }
+
+    private void UpdateTitle()
+    {
+        // Slowly rotate camera.
+        GameCamera.transform.rotation *= Quaternion.Euler( new Vector3( 0, 0, Time.deltaTime ) );
+
+        bool fire = Input.GetButtonDown( "Fire1" );
+        if( fire )
+            StartGame();
+    }
+
+    private void UpdatePlaying()
+    {
+        // Update health bars.
+        UpdateHealthBars();
+
+        // Update weapon text.
+        UpdateWeaponText();
+
+        // Update game time.
+        UpdateTime();
+
+        if( !CurrentPickup )
+        {
+            if( isReadyToSpawnWeapon )
+            {
+                ResetWeaponSpawnTimer();
+                isReadyToSpawnWeapon = false;
+            }
+
+            if( weaponSpawnTimer > 0 )
+            {
+                weaponSpawnTimer -= Time.deltaTime;
+            }
+            else
+            {
+                SpawnWeapon();
+                isReadyToSpawnWeapon = true;
+            }
+        }
+
+        if( CurrentPlayer )
+        {
+            playerPos = CurrentPlayer.transform.position;
+        }
+        else
+        {
+            if( isReadyToSpawnPlayer )
+            {
+                playerSpawnTimer = ShipSpawnDelay;
+                isReadyToSpawnPlayer = false;
+                playerDestroyed = CreateRedText( playerPos );
+
+                // Player just died.
+                ++opponentScore;
+                UpdateScore();
+            }
+
+            if( playerSpawnTimer > 0 )
+            {
+                playerSpawnTimer -= Time.deltaTime;
+                playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
+            }
+            else
+            {
+                SpawnPlayer( true );
+                isReadyToSpawnPlayer = true;
+            }
+        }
+
+        if( currentOpponent )
+        {
+            opponentPos = currentOpponent.transform.position;
+        }
+        else
+        {
+            if( isReadyToSpawnOpponent )
+            {
+                opponentSpawnTimer = ShipSpawnDelay;
+                isReadyToSpawnOpponent = false;
+                opponentDestroyed = CreateRedText( opponentPos );
+
+                // Opponent just died.
+                ++playerScore;
+                UpdateScore();
+            }
+
+            if( opponentSpawnTimer > 0 )
+            {
+                opponentSpawnTimer -= Time.deltaTime;
+                opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
+            }
+            else
+            {
+                SpawnOpponent( true );
+                isReadyToSpawnOpponent = true;
+            }
+        }
+    }
+
+    private void UpdateEnded()
+    {
+        bool fire = Input.GetButtonDown( "Fire1" );
+        if( fire )
+            ResetTitle();
     }
 
     private void ResetTitle()
@@ -328,6 +354,54 @@ public class GameController : MonoBehaviour
     {
         PlayerScoreText.text = playerScore.ToString();
         OpponentScoreText.text = opponentScore.ToString();
+    }
+
+    private void UpdateHealthBars()
+    {
+        // Update player's health bar.
+        float playerOffset = maxBarWidth;
+        if( CurrentPlayer )
+        {
+            float playerBarWidth = ( float ) CurrentPlayer.Health / Ship.Health * maxBarWidth;
+            playerOffset = maxBarWidth - playerBarWidth;
+        }
+
+        PlayerHealth.offsetMax = new Vector2( -playerOffset, PlayerHealth.offsetMax.y );
+
+        // Update opponent's health bar.
+        float opponentOffset = maxBarWidth;
+        if( currentOpponent )
+        {
+            float opponentBarWidth = ( float ) currentOpponent.Health / Ship.Health * maxBarWidth;
+            opponentOffset = maxBarWidth - opponentBarWidth;
+        }
+
+        OpponentHealth.offsetMin = new Vector2( opponentOffset, OpponentHealth.offsetMax.y );
+    }
+
+    private void UpdateWeaponText()
+    {
+        // Update player's weapon text.
+        string playerWeapon = "";
+        if( CurrentPlayer && CurrentPlayer.HeavyWeapon && 
+            CurrentPlayer.HeavyWeapon.Ammo > 0 )
+        {
+            playerWeapon = CurrentPlayer.HeavyWeapon.Name + 
+                " (" + CurrentPlayer.HeavyWeapon.Ammo + ")";
+        }
+
+        PlayerWeaponText.text = playerWeapon;
+
+        // Update opponent's weapon text.
+        string opponentWeapon = "";
+        if( currentOpponent && currentOpponent.HeavyWeapon && 
+            currentOpponent.HeavyWeapon.Ammo > 0 )
+        {
+            opponentWeapon = currentOpponent.HeavyWeapon.Name +
+                " (" + currentOpponent.HeavyWeapon.Ammo + ")";
+        }
+
+        OpponentWeaponText.text = opponentWeapon;
     }
 
     private void UpdateTime()

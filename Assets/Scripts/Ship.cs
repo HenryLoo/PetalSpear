@@ -107,15 +107,6 @@ public class Ship : MonoBehaviour
         }
     }
 
-    void OnCollisionEnter( Collision other )
-    {
-        if( other.gameObject.tag == "Character" )
-        {
-            Physics.IgnoreCollision( other.gameObject.GetComponent<Collider>(), GetComponent<Collider>() );
-        }
-    }
-
-
     public void Thrust( float amount )
     {
         if( amount != 0 )

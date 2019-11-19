@@ -22,7 +22,7 @@ public class AIEngine : MonoBehaviour
 
     private bool isFiringStandard = false;
     private bool isFiringHeavy = false;
-    public float FiringRadius = 90;
+    public float FiringRadius;
 
     private const float RETRY_SEEK_PICKUP_DURATION = 3;
     private float retrySeekPickupTimer;
