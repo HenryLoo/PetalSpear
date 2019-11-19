@@ -260,6 +260,7 @@ public class GameController : MonoBehaviour
         // Reset scores.
         playerScore = 0;
         opponentScore = 0;
+        UpdateScore();
 
         // Reset timers.
         ResetWeaponSpawnTimer();
