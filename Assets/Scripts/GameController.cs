@@ -17,6 +17,7 @@ public class GameController : MonoBehaviour
     private float opponentSpawnTimer;
     private bool isReadyToSpawnPlayer = true;
     private bool isReadyToSpawnOpponent = true;
+    public GameObject SpawnWarp;
 
     public WeaponPickup WeaponPickup;
     private WeaponTypes weaponTypes;
@@ -40,6 +41,11 @@ public class GameController : MonoBehaviour
     private Vector3 playerPos;
     private Vector3 opponentPos;
 
+    public Canvas TitleUI;
+    private bool hasGameStarted = false;
+
+    public float InvincibilityDuration;
+
     void Awake()
     {
         weaponTypes = GetComponent<WeaponTypes>();
@@ -48,82 +54,103 @@ public class GameController : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        SpawnPlayer( false );
-        SpawnOpponent( false );
-        ResetWeaponSpawnTimer();
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        if( !CurrentPickup )
+        // Title screen.
+        if( !hasGameStarted )
         {
-            if( isReadyToSpawnWeapon )
-            {
-                ResetWeaponSpawnTimer();
-                isReadyToSpawnWeapon = false;
-            }
-
-            if( weaponSpawnTimer > 0 )
-            {
-                weaponSpawnTimer -= Time.deltaTime;
-            }
-            else
-            {
-                SpawnWeapon();
-                isReadyToSpawnWeapon = true;
-            }
+            float fire = Input.GetAxis( "Fire1" );
+            if( fire != 0 )
+                StartGame();
         }
-
-        if( CurrentPlayer )
-        {
-            playerPos = CurrentPlayer.transform.position;
-        }
+        // Game logic.
         else
         {
-            if( isReadyToSpawnPlayer )
+            if( !CurrentPickup )
             {
-                playerSpawnTimer = ShipSpawnDelay;
-                isReadyToSpawnPlayer = false;
-                playerDestroyed = CreateRedText( playerPos );
+                if( isReadyToSpawnWeapon )
+                {
+                    ResetWeaponSpawnTimer();
+                    isReadyToSpawnWeapon = false;
+                }
+
+                if( weaponSpawnTimer > 0 )
+                {
+                    weaponSpawnTimer -= Time.deltaTime;
+                }
+                else
+                {
+                    SpawnWeapon();
+                    isReadyToSpawnWeapon = true;
+                }
             }
 
-            if( playerSpawnTimer > 0 )
+            if( CurrentPlayer )
             {
-                playerSpawnTimer -= Time.deltaTime;
-                playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
+                playerPos = CurrentPlayer.transform.position;
             }
             else
             {
-                SpawnPlayer( true );
-                isReadyToSpawnPlayer = true;
-            }
-        }
+                if( isReadyToSpawnPlayer )
+                {
+                    playerSpawnTimer = ShipSpawnDelay;
+                    isReadyToSpawnPlayer = false;
+                    playerDestroyed = CreateRedText( playerPos );
+                }
 
-        if( currentOpponent )
-        {
-            opponentPos = currentOpponent.transform.position;
-        }
-        else
-        {
-            if( isReadyToSpawnOpponent )
-            {
-                opponentSpawnTimer = ShipSpawnDelay;
-                isReadyToSpawnOpponent = false;
-                opponentDestroyed = CreateRedText( opponentPos );
+                if( playerSpawnTimer > 0 )
+                {
+                    playerSpawnTimer -= Time.deltaTime;
+                    playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
+                }
+                else
+                {
+                    SpawnPlayer( true );
+                    isReadyToSpawnPlayer = true;
+                }
             }
 
-            if( opponentSpawnTimer > 0 )
+            if( currentOpponent )
             {
-                opponentSpawnTimer -= Time.deltaTime;
-                opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
+                opponentPos = currentOpponent.transform.position;
             }
             else
             {
-                SpawnOpponent( true );
-                isReadyToSpawnOpponent = true;
+                if( isReadyToSpawnOpponent )
+                {
+                    opponentSpawnTimer = ShipSpawnDelay;
+                    isReadyToSpawnOpponent = false;
+                    opponentDestroyed = CreateRedText( opponentPos );
+                }
+
+                if( opponentSpawnTimer > 0 )
+                {
+                    opponentSpawnTimer -= Time.deltaTime;
+                    opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
+                }
+                else
+                {
+                    SpawnOpponent( true );
+                    isReadyToSpawnOpponent = true;
+                }
             }
         }
+    }
+
+    private void StartGame()
+    {
+        // Hide title screen.
+        if( TitleUI.enabled )
+            TitleUI.enabled = false;
+
+        SpawnPlayer( false );
+        SpawnOpponent( false );
+        ResetWeaponSpawnTimer();
+        hasGameStarted = true;
     }
 
     private void SpawnWeapon()
@@ -146,13 +173,11 @@ public class GameController : MonoBehaviour
         if( CurrentPlayer )
             return;
 
-        Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( PlayerSpawnPos.x, 0, PlayerSpawnPos.y );
-        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 90, PlayerSpawnRot, 0 );
-        CurrentPlayer = ( Ship ) Instantiate( Ship, position, rotation );
-        Player player = ( Player ) Instantiate( Player, position, CurrentPlayer.transform.rotation );
+        CurrentPlayer = SpawnShip( isRandomPos, 0, PlayerSpawnPos, PlayerSpawnRot );
+        Player player = ( Player ) Instantiate( Player,
+            CurrentPlayer.transform.position, CurrentPlayer.transform.rotation );
         player.transform.SetParent( CurrentPlayer.transform );
         player.Ship = CurrentPlayer;
-        CurrentPlayer.Team = 0;
         GameCamera.Target = CurrentPlayer.transform;
     }
 
@@ -162,14 +187,23 @@ public class GameController : MonoBehaviour
         if( currentOpponent )
             return;
 
-        Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( OpponentSpawnPos.x, 0, OpponentSpawnPos.y );
-        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 90, OpponentSpawnRot, 0 );
-        currentOpponent = ( Ship ) Instantiate( Ship, position, rotation );
-        AIEngine opponent = ( AIEngine ) Instantiate( AIEngine, position, currentOpponent.transform.rotation );
+        currentOpponent = SpawnShip( isRandomPos, 1, OpponentSpawnPos, OpponentSpawnRot );
+        AIEngine opponent = ( AIEngine ) Instantiate( AIEngine,
+            currentOpponent.transform.position, currentOpponent.transform.rotation );
         opponent.transform.SetParent( currentOpponent.transform );
         opponent.Game = this;
-        currentOpponent.Team = 1;
         opponent.Ship = currentOpponent;
+    }
+
+    private Ship SpawnShip( bool isRandomPos, int team, Vector2 spawnPos, float spawnRot )
+    {
+        Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( spawnPos.x, 0, spawnPos.y );
+        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 90, spawnRot, 0 );
+        Ship thisShip = ( Ship ) Instantiate( Ship, position, rotation );
+        thisShip.Team = team;
+        thisShip.InvincibilityTimer = InvincibilityDuration;
+        Instantiate( SpawnWarp, thisShip.transform.position, SpawnWarp.transform.rotation );
+        return thisShip;
     }
 
     private Vector3 GetRandomPosition()

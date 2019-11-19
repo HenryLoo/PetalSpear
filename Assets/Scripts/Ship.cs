@@ -31,6 +31,8 @@ public class Ship : MonoBehaviour
     public TextMesh Text;
     private const float PICKUP_TEXT_DURATION = 2;
 
+    public float InvincibilityTimer;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -44,6 +46,16 @@ public class Ship : MonoBehaviour
         Weapon standard = WeaponTypes.GetWeapon( WeaponTypes.Type.Standard );
         StandardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
         StandardWeapon.transform.SetParent( transform );
+
+        // Initialize material values.
+        rend.material.SetFloat( "_Mode", 4f );
+        rend.material.SetInt( "_SrcBlend", ( int ) UnityEngine.Rendering.BlendMode.SrcAlpha );
+        rend.material.SetInt( "_DstBlend", ( int ) UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha );
+        rend.material.SetInt( "_ZWrite", 0 );
+        rend.material.DisableKeyword( "_ALPHATEST_ON" );
+        rend.material.EnableKeyword( "_ALPHABLEND_ON" );
+        rend.material.DisableKeyword( "_ALPHAPREMULTIPLY_ON" );
+        rend.material.renderQueue = 3000;
     }
 
     // Update is called once per frame
@@ -72,6 +84,17 @@ public class Ship : MonoBehaviour
         {
             Instantiate( Explosion, transform.position, transform.rotation );
             Destroy( this.gameObject );
+        }
+
+        if( InvincibilityTimer > 0 )
+        {
+            InvincibilityTimer -= Time.deltaTime;
+            SetAlpha( 0.5f );
+        }
+        else
+        {
+            SetAlpha( 1 );
+            InvincibilityTimer = 0;
         }
     }
 
@@ -144,5 +167,12 @@ public class Ship : MonoBehaviour
     public Vector3 GetVelocity()
     {
         return rb.velocity;
+    }
+
+    private void SetAlpha( float a )
+    {
+        Color newCol = rend.material.color;
+        newCol.a = a;
+        rend.material.color = newCol;
     }
 }

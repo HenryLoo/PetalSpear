@@ -24,7 +24,7 @@ public class AIEngine : MonoBehaviour
     private bool isFiringHeavy = false;
     public float FiringRadius = 90;
 
-    private const float RETRY_SEEK_PICKUP_DURATION = 5;
+    private const float RETRY_SEEK_PICKUP_DURATION = 3;
     private float retrySeekPickupTimer;
 
     private StateMachine states;
@@ -178,7 +178,8 @@ public class AIEngine : MonoBehaviour
             }
         }
 
-        if( isFiringHeavy )
+        // Don't waste ammo if the player is invincible.
+        if( isFiringHeavy && Game.CurrentPlayer.InvincibilityTimer == 0)
         {
             Ship.FireHeavy();
         }

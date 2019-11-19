@@ -36,7 +36,7 @@ public class Bullet : MonoBehaviour
         }
 
         Ship otherShip = other.gameObject.GetComponent<Ship>();
-        if( otherShip && otherShip.Team != Team )
+        if( otherShip && otherShip.Team != Team  && otherShip.InvincibilityTimer == 0)
         {
             otherShip.Health -= Damage;
             ProcessHitSpark();
