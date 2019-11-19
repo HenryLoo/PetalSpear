@@ -23,6 +23,7 @@ public class AIEngine : MonoBehaviour
     private bool isFiringStandard = false;
     private bool isFiringHeavy = false;
     public float FiringRadius;
+    private const float MIN_FIRING_RADIUS = 5;
 
     private const float RETRY_SEEK_PICKUP_DURATION = 3;
     private float retrySeekPickupTimer;
@@ -113,8 +114,8 @@ public class AIEngine : MonoBehaviour
         thisToTarget = targetPos - transform.position;
 
         // Fire weapons if available.
-        isFiringHeavy = Ship.HeavyWeapon ? IsFiring( Ship.HeavyWeapon ) : false;
-        isFiringStandard = IsFiring( Ship.StandardWeapon );
+        isFiringHeavy = Ship.HeavyWeapon ? IsFiringHeavy() : false;
+        isFiringStandard = IsFiringStandard();
     }
 
     private void Move()
@@ -225,11 +226,29 @@ public class AIEngine : MonoBehaviour
             return HealthState.Healthy;
     }
 
+    private bool IsFiringHeavy()
+    {
+        bool isFiring = IsFiring( Ship.HeavyWeapon );
+        Vector3 thisToPlayer = playerPos - transform.position;
+        float totalFiringRadius = Ship.HeavyWeapon.NumBullets * Ship.HeavyWeapon.SpreadAngle + MIN_FIRING_RADIUS;
+        isFiring &= Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= totalFiringRadius;
+
+        return isFiring;
+    }
+
+    private bool IsFiringStandard()
+    {
+        bool isFiring = IsFiring( Ship.StandardWeapon );
+        Vector3 thisToPlayer = playerPos - transform.position;
+        isFiring &= Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius;
+
+        return isFiring;
+    }
+
     private bool IsFiring( Weapon wpn )
     {
         bool isFiring = Game.CurrentPlayer;
         Vector3 thisToPlayer = playerPos - transform.position;
-        isFiring &= Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= FiringRadius;
         float bulletRange = wpn.BulletSpeed * wpn.BulletDuration;
         isFiring &= Vector3.Magnitude( thisToPlayer ) <= bulletRange;
         return isFiring;
