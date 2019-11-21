@@ -17,6 +17,10 @@ public class GameController : MonoBehaviour
     public float ShipSpawnDelay;
     public Vector2 WeaponSpawnRateRange;
 
+    // Distance from a ship to spawn the weapon (when not random).
+    public Vector2 WeaponSpawnDistRange;
+    public float WeaponHelpDist;
+
     public float GameDuration;
     public float InvincibilityDuration;
 
@@ -71,6 +75,13 @@ public class GameController : MonoBehaviour
 
     private GameState currentState = GameState.Title;
 
+    private NGramPredictor pickupNGram;
+    private const int N_GRAM_WINDOW_SIZE = 2;
+    private const string N_GRAM_PLAYER_ACTION = "player";
+    private const string N_GRAM_OPPONENT_ACTION = "ai";
+    private List<string> pickupNGramSequence;
+    private string nextPickupAction = string.Empty;
+
     enum GameState
     {
         Title,
@@ -84,13 +95,14 @@ public class GameController : MonoBehaviour
         GameUI.enabled = false;
         EndUI.enabled = false;
         endSound = GetComponent<AudioSource>();
-        maxBarWidth = PlayerHealth.rect.width;
     }
 
     // Use this for initialization
     void Start()
     {
-
+        maxBarWidth = PlayerHealth.rect.width;
+        pickupNGram = new NGramPredictor( N_GRAM_WINDOW_SIZE );
+        pickupNGramSequence = new List<string>();
     }
 
     // Update is called once per frame
@@ -155,7 +167,6 @@ public class GameController : MonoBehaviour
             else
             {
                 SpawnWeapon();
-                isReadyToSpawnWeapon = true;
             }
         }
 
@@ -280,12 +291,64 @@ public class GameController : MonoBehaviour
         if( CurrentPickup )
             return;
 
-        Weapons wpn = weaponTypes.GetRandomWeapon();
+        // Try to predict which ship will pick up this item.
+        // To help the "losing" ship, spawn it closer to the ship that is
+        // predicted to not pick it up.
         Vector3 position = GetRandomPosition();
+
+        if( pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE )
+        {
+            if ( nextPickupAction == string.Empty )
+                nextPickupAction = pickupNGram.PredictNextAction( pickupNGramSequence );
+
+            // A ship is being helped...
+            bool isHelpingPlayer = ( nextPickupAction == N_GRAM_OPPONENT_ACTION && CurrentPlayer );
+            bool isHelpingOpponent = ( nextPickupAction == N_GRAM_PLAYER_ACTION && currentOpponent );
+            if( nextPickupAction != string.Empty )
+            {
+                bool tooClose = currentOpponent && CurrentPlayer &&
+                    Vector3.Distance( currentOpponent.transform.position,
+                    CurrentPlayer.transform.position ) < WeaponHelpDist;
+
+                if( !tooClose && ( isHelpingPlayer || isHelpingOpponent ) )
+                {
+                    // Calculate a random distance from the ship being helped.
+                    float x = UnityEngine.Random.Range( WeaponSpawnDistRange.x, WeaponSpawnDistRange.y );
+                    float z = UnityEngine.Random.Range( WeaponSpawnDistRange.x, WeaponSpawnDistRange.y );
+                    Vector3 weaponDist = new Vector3( x, 0, z );
+
+                    position = ( nextPickupAction == N_GRAM_PLAYER_ACTION ) ?
+                        currentOpponent.transform.position :
+                        CurrentPlayer.transform.position;
+                    position += weaponDist;
+
+                    // Make sure the weapon stays within the level bounds.
+                    position.x = Mathf.Clamp( position.x, LevelXBounds.x, LevelXBounds.y );
+                    position.z = Mathf.Clamp( position.z, LevelZBounds.x, LevelZBounds.y );
+
+                    // Reset the next pickup action.
+                    nextPickupAction = string.Empty;
+                }
+                else
+                {
+                    // We want to help a ship, but that ship is not in a 
+                    // position to be helped (either too close to its enemy
+                    // or the ship we want to help is dead).
+                    // So delay this weapon spawn.
+                    return;
+                }
+            }
+        }
+
+        Weapons wpn = weaponTypes.GetRandomWeapon();
         WeaponPickup pickup = ( WeaponPickup ) Instantiate( WeaponPickup, position, transform.rotation );
+        pickup.Game = this;
         pickup.WeaponType = wpn.Type;
         pickup.GetComponent<Renderer>().material.SetColor( "_Color", wpn.Weapon.Colour );
         CurrentPickup = pickup;
+
+        // Set the flag to confirm weapon has been spawned.
+        isReadyToSpawnWeapon = true;
     }
 
     private void SpawnPlayer( bool isRandomPos )
@@ -388,7 +451,7 @@ public class GameController : MonoBehaviour
             CurrentPlayer.HeavyWeapon.Ammo > 0 )
         {
             playerWeapon = CurrentPlayer.HeavyWeapon.Name + 
-                " (" + CurrentPlayer.HeavyWeapon.Ammo + ")";
+                " " + CurrentPlayer.HeavyWeapon.Ammo + "x";
         }
 
         PlayerWeaponText.text = playerWeapon;
@@ -399,7 +462,7 @@ public class GameController : MonoBehaviour
             currentOpponent.HeavyWeapon.Ammo > 0 )
         {
             opponentWeapon = currentOpponent.HeavyWeapon.Name +
-                " (" + currentOpponent.HeavyWeapon.Ammo + ")";
+                " " + currentOpponent.HeavyWeapon.Ammo + "x";
         }
 
         OpponentWeaponText.text = opponentWeapon;
@@ -449,6 +512,23 @@ public class GameController : MonoBehaviour
                 Destroy( CurrentPickup.gameObject );
 
             WinText.text = msg;
+        }
+    }
+
+    // Register which ship picked up the weapon.
+    public void UpdatePickupNGram( int team )
+    {
+        string value = ( team == 0 ) ? N_GRAM_PLAYER_ACTION : N_GRAM_OPPONENT_ACTION;
+
+        pickupNGramSequence.Add( value );
+
+        // If not enough actions in the sequence, then don't register it.
+        if( pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE + 1 )
+        {
+            pickupNGram.RegisterSequence( pickupNGramSequence );
+
+            // Remove the oldest action.
+            pickupNGramSequence.RemoveAt( 0 );
         }
     }
 }
