@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -139,10 +139,18 @@ public class GameController : MonoBehaviour
         bool fire = Input.GetButtonDown( "Fire1" );
         if( fire )
             StartGame();
+
+        bool cancel = Input.GetButtonDown( "Cancel" );
+        if( cancel )
+            Application.Quit();
     }
 
     private void UpdatePlaying()
     {
+        bool cancel = Input.GetButtonDown( "Cancel" );
+        if( cancel )
+            ResetTitle();
+
         // Update health bars.
         UpdateHealthBars();
 
