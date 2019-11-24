@@ -33,11 +33,14 @@ public class Ship : MonoBehaviour
 
     public float InvincibilityTimer;
 
+    private Animator animator;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        trail = GetComponent<TrailRenderer>();
-        rend = GetComponent<Renderer>();
+        trail = GetComponentInChildren<TrailRenderer>();
+        rend = GetComponentInChildren<Renderer>();
+        animator = GetComponentInChildren<Animator>();
     }
 
     // Use this for initialization
@@ -61,7 +64,7 @@ public class Ship : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        FrontVector = transform.up;
+        FrontVector = transform.forward;
 
         trail.enabled = ( currentVelocity != Vector3.zero );
 
@@ -105,6 +108,15 @@ public class Ship : MonoBehaviour
         {
             rb.AddForce( currentVelocity );
         }
+
+        if( IsRollingLeft() )
+        {
+            rb.AddForce( -transform.right * ThrustSpeed );
+        }
+        else if( IsRollingRight() )
+        {
+            rb.AddForce( transform.right * ThrustSpeed );
+        }
     }
 
     public void Thrust( float amount )
@@ -123,10 +135,10 @@ public class Ship : MonoBehaviour
 
     public void Rotate( float amount )
     {
-        if( amount != 0 )
+        if( amount != 0 && !IsRollingLeft() && !IsRollingRight() )
         {
             float rotation = -Mathf.Sign( amount );
-            transform.rotation *= Quaternion.Euler( 0, 0, rotation * RotationSpeed * Time.deltaTime );
+            transform.rotation *= Quaternion.Euler( 0, -rotation * RotationSpeed * Time.deltaTime, 0 );
         }
     }
 
@@ -173,5 +185,25 @@ public class Ship : MonoBehaviour
     {
         Instantiate( Explosion, transform.position, transform.rotation );
         Destroy( this.gameObject );
+    }
+
+    public void DodgeRoll( bool isRollingLeft )
+    {
+        if( isRollingLeft )
+            animator.Play( "RollLeft" );
+        else
+            animator.Play( "RollRight" );
+
+        InvincibilityTimer = 0.2f;
+    }
+
+    private bool IsRollingLeft()
+    {
+        return animator.GetCurrentAnimatorStateInfo( 0 ).IsName( "RollLeft" );
+    }
+
+    private bool IsRollingRight()
+    {
+        return animator.GetCurrentAnimatorStateInfo( 0 ).IsName( "RollRight" );
     }
 }

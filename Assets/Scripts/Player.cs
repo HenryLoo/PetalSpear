@@ -8,6 +8,7 @@ public class Player : MonoBehaviour
 
     public AudioSource ThrustSound;
     public AudioSource BounceSound;
+    public AudioSource RollSound;
 
     // Use this for initialization
     void Start()
@@ -18,25 +19,39 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float vertical = Input.GetAxis( "Vertical" );
-        Ship.Thrust( vertical );
-        if( vertical != 0 && !ThrustSound.isPlaying )
+        float thrust = Input.GetAxis( "Thrust" );
+        Ship.Thrust( thrust );
+        if( thrust != 0 && !ThrustSound.isPlaying )
             ThrustSound.Play();
-        else if( vertical == 0 )
+        else if( thrust == 0 )
             ThrustSound.Stop();
 
-        float horizontal = Input.GetAxis( "Horizontal" );
-        Ship.Rotate( horizontal );
+        float rotate = Input.GetAxis( "Rotate" );
+        Ship.Rotate( rotate );
 
-        float fire = Input.GetAxis( "Fire1" );
-        float fire2 = Input.GetAxis( "Fire2" );
-        if( fire2 != 0 )
+        float fireStandard = Input.GetAxis( "Standard Weapon" );
+        float fireHeavy = Input.GetAxis( "Heavy Weapon" );
+        if( fireHeavy != 0 )
         {
             Ship.FireHeavy();
         }
-        else if( fire != 0 )
+        else if( fireStandard != 0 )
         {
             Ship.FireStandard();
+        }
+
+        if( Input.GetButtonDown( "Dodge Roll" ) )
+        {
+            if ( rotate < 0 )
+            {
+                Ship.DodgeRoll( true );
+                RollSound.Play();
+            }
+            else if( rotate > 0 )
+            {
+                Ship.DodgeRoll( false );
+                RollSound.Play();
+            }
         }
     }
     void OnCollisionEnter( Collision other )

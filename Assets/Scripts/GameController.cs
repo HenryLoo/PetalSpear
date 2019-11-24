@@ -136,7 +136,7 @@ public class GameController : MonoBehaviour
         // Slowly rotate camera.
         GameCamera.transform.rotation *= Quaternion.Euler( new Vector3( 0, 0, Time.deltaTime ) );
 
-        bool fire = Input.GetButtonDown( "Fire1" );
+        bool fire = Input.GetButtonDown( "Standard Weapon" );
         if( fire )
             StartGame();
 
@@ -239,7 +239,7 @@ public class GameController : MonoBehaviour
 
     private void UpdateEnded()
     {
-        bool fire = Input.GetButtonDown( "Fire1" );
+        bool fire = Input.GetButtonDown( "Standard Weapon" );
         if( fire )
             ResetTitle();
     }
@@ -390,7 +390,7 @@ public class GameController : MonoBehaviour
     private Ship SpawnShip( bool isRandomPos, int team, Vector2 spawnPos, float spawnRot )
     {
         Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( spawnPos.x, 0, spawnPos.y );
-        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 90, spawnRot, 0 );
+        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 0, spawnRot, 0 );
         Ship thisShip = ( Ship ) Instantiate( Ship, position, rotation );
         thisShip.Team = team;
         thisShip.InvincibilityTimer = InvincibilityDuration;
@@ -407,7 +407,7 @@ public class GameController : MonoBehaviour
 
     private Quaternion GetRandomRotation()
     {
-        return Quaternion.Euler( 90, UnityEngine.Random.Range( 0, 360 ), 0 );
+        return Quaternion.Euler( 0, UnityEngine.Random.Range( 0, 360 ), 0 );
     }
 
     public void ResetWeaponSpawnTimer()
