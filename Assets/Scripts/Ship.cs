@@ -4,6 +4,8 @@ using UnityEngine;
 
 public class Ship : MonoBehaviour
 {
+    public GameController Game;
+
     public int Health = 100;
 
     public int Team;
@@ -17,6 +19,7 @@ public class Ship : MonoBehaviour
 
     private Rigidbody rb;
     private Vector3 currentVelocity;
+    private float currentRotationDirection;
 
     public Vector3 FrontVector;
 
@@ -49,6 +52,7 @@ public class Ship : MonoBehaviour
         Weapon standard = WeaponTypes.GetWeapon( WeaponTypes.Type.Standard );
         StandardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
         StandardWeapon.transform.SetParent( transform );
+        StandardWeapon.Game = Game;
 
         // Initialize material values.
         rend.material.SetFloat( "_Mode", 4f );
@@ -135,10 +139,10 @@ public class Ship : MonoBehaviour
 
     public void Rotate( float amount )
     {
-        if( amount != 0 && !IsRollingLeft() && !IsRollingRight() )
+        currentRotationDirection = amount == 0 ? 0 : Mathf.Sign( amount );
+        if( amount != 0 && !IsRolling() )
         {
-            float rotation = -Mathf.Sign( amount );
-            transform.rotation *= Quaternion.Euler( 0, -rotation * RotationSpeed * Time.deltaTime, 0 );
+            transform.rotation *= Quaternion.Euler( 0, currentRotationDirection * RotationSpeed * Time.deltaTime, 0 );
         }
     }
 
@@ -164,6 +168,7 @@ public class Ship : MonoBehaviour
         Weapon heavy = WeaponTypes.GetWeapon( type );
         HeavyWeapon = ( Weapon ) Instantiate( heavy, transform.position, transform.rotation );
         HeavyWeapon.transform.SetParent( transform );
+        HeavyWeapon.Game = Game;
 
         TextMesh text = Instantiate( Text, transform.position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
         text.text = HeavyWeapon.Name + " (" + HeavyWeapon.Ammo + "x)";
@@ -187,14 +192,24 @@ public class Ship : MonoBehaviour
         Destroy( this.gameObject );
     }
 
-    public void DodgeRoll( bool isRollingLeft )
+    public bool DodgeRoll()
     {
-        if( isRollingLeft )
+        // Already rolling.
+        if( IsRolling() || currentRotationDirection == 0 )
+            return false;
+
+        if( currentRotationDirection < 0 )
             animator.Play( "RollLeft" );
-        else
+        else if( currentRotationDirection > 0 )
             animator.Play( "RollRight" );
 
         InvincibilityTimer = 0.2f;
+        return true;
+    }
+
+    public bool IsRolling()
+    {
+        return IsRollingLeft() || IsRollingRight();
     }
 
     private bool IsRollingLeft()

@@ -42,6 +42,7 @@ public class GameController : MonoBehaviour
 
     public Ship CurrentPlayer;
     private Ship currentOpponent;
+    private AIEngine currentAI;
     public WeaponPickup CurrentPickup;
 
     public TextMesh RedText;
@@ -82,6 +83,18 @@ public class GameController : MonoBehaviour
     private List<string> pickupNGramSequence;
     private string nextPickupAction = string.Empty;
 
+    // Use Naive Bayes Classifier to help AI learn if it should be
+    // dodge rolling.
+    // Attributes: isPlayerFast, isOpponentFast, isPlayerFarAway, 
+    // isFacingEachOther, isPlayerHealthy, isOpponentHealthy
+    // Output: isDodgeRolling?
+    private NaiveBayesClassifier nBayes;
+    private const int NUM_NBAYES_ATTRIBUTES = 6;
+    public bool IsLearningNBayes = false;
+    private const float NBAYES_LEARN_DURATION = 1.0f;
+    private float nBayesLearnTimer;
+    private List<bool> nBayesAttributes;
+
     enum GameState
     {
         Title,
@@ -103,6 +116,13 @@ public class GameController : MonoBehaviour
         maxBarWidth = PlayerHealth.rect.width;
         pickupNGram = new NGramPredictor( N_GRAM_WINDOW_SIZE );
         pickupNGramSequence = new List<string>();
+        nBayes = new NaiveBayesClassifier( NUM_NBAYES_ATTRIBUTES );
+
+        nBayesAttributes = new List<bool>();
+        for( int i = 0; i < NUM_NBAYES_ATTRIBUTES; ++i )
+        {
+            nBayesAttributes.Add( false );
+        }
     }
 
     // Update is called once per frame
@@ -160,6 +180,7 @@ public class GameController : MonoBehaviour
         // Update game time.
         UpdateTime();
 
+        // Weapon spawning.
         if( !CurrentPickup )
         {
             if( isReadyToSpawnWeapon )
@@ -178,6 +199,7 @@ public class GameController : MonoBehaviour
             }
         }
 
+        // Player spawning.
         if( CurrentPlayer )
         {
             playerPos = CurrentPlayer.transform.position;
@@ -195,7 +217,7 @@ public class GameController : MonoBehaviour
                 UpdateScore();
             }
 
-            if( playerSpawnTimer > 0 )
+            if( playerDestroyed && playerSpawnTimer > 0 )
             {
                 playerSpawnTimer -= Time.deltaTime;
                 playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
@@ -207,6 +229,7 @@ public class GameController : MonoBehaviour
             }
         }
 
+        // Opponent spawning.
         if( currentOpponent )
         {
             opponentPos = currentOpponent.transform.position;
@@ -224,7 +247,7 @@ public class GameController : MonoBehaviour
                 UpdateScore();
             }
 
-            if( opponentSpawnTimer > 0 )
+            if( opponentDestroyed && opponentSpawnTimer > 0 )
             {
                 opponentSpawnTimer -= Time.deltaTime;
                 opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
@@ -235,6 +258,26 @@ public class GameController : MonoBehaviour
                 isReadyToSpawnOpponent = true;
             }
         }
+
+        // Enable learning with Naive Bayes when the AI is firing.
+        IsLearningNBayes = ( currentAI && 
+            ( currentAI.IsFiringHeavy() || currentAI.IsFiringStandard() ) );
+
+        //// Learn negative examples.
+        //if( IsLearningNBayes )
+        //{
+        //    nBayesLearnTimer += Time.deltaTime;
+        //    if( nBayesLearnTimer >= NBAYES_LEARN_DURATION )
+        //    {
+        //        UpdateNBayes( false );
+        //        nBayesLearnTimer = 0;
+        //    }
+        //}
+        //// Reset the timer.
+        //else
+        //{
+        //    nBayesLearnTimer = 0;
+        //}
     }
 
     private void UpdateEnded()
@@ -291,6 +334,10 @@ public class GameController : MonoBehaviour
 
         // Reset camera rotation.
         GameCamera.transform.rotation = Quaternion.Euler( 90, 0, 0 );
+
+        // Reset learning.
+        pickupNGram.Reset();
+        nBayes.Reset();
     }
 
     private void SpawnWeapon()
@@ -383,8 +430,8 @@ public class GameController : MonoBehaviour
         AIEngine opponent = ( AIEngine ) Instantiate( AIEngine,
             currentOpponent.transform.position, currentOpponent.transform.rotation );
         opponent.transform.SetParent( currentOpponent.transform );
-        opponent.Game = this;
         opponent.Ship = currentOpponent;
+        currentAI = opponent;
     }
 
     private Ship SpawnShip( bool isRandomPos, int team, Vector2 spawnPos, float spawnRot )
@@ -392,6 +439,7 @@ public class GameController : MonoBehaviour
         Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( spawnPos.x, 0, spawnPos.y );
         Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 0, spawnRot, 0 );
         Ship thisShip = ( Ship ) Instantiate( Ship, position, rotation );
+        thisShip.Game = this;
         thisShip.Team = team;
         thisShip.InvincibilityTimer = InvincibilityDuration;
         Instantiate( SpawnWarp, thisShip.transform.position, SpawnWarp.transform.rotation );
@@ -538,5 +586,76 @@ public class GameController : MonoBehaviour
             // Remove the oldest action.
             pickupNGramSequence.RemoveAt( 0 );
         }
+    }
+
+    public void UpdateNBayes( bool isPositiveExample )
+    {
+        if( !CurrentPlayer || !currentOpponent )
+            return;
+
+        UpdateNBayesAttributes( false );
+
+        Debug.Log( "Updating NBayes: isPlayerFast: " + nBayesAttributes[ 0 ] +
+            ", isOpponentFast: " + nBayesAttributes[ 1 ] +
+            ", isOpponentFarAway: " + nBayesAttributes[ 2 ] +
+            ", isFacingEachOther: " + nBayesAttributes[ 3 ] +
+            ", isPlayerHealthy: " + nBayesAttributes[ 4 ] +
+            ", isOpponentHealthy: " + nBayesAttributes[ 5 ] +
+            ", isPositiveExample: " + isPositiveExample );
+
+        nBayes.Update( nBayesAttributes, isPositiveExample );
+    }
+
+    private void UpdateNBayesAttributes( bool isPredicting )
+    {
+        bool isPlayerFast = ClassifySpeed( CurrentPlayer.GetVelocity() );
+        bool isOpponentFast = ClassifySpeed( currentOpponent.GetVelocity() );
+        bool isPlayerHealthy = ClassifyHealthy( CurrentPlayer.Health );
+        bool isOpponentHealthy = ClassifyHealthy( currentOpponent.Health );
+
+        // isPlayerFast
+        nBayesAttributes[ 0 ] = isPredicting ? isOpponentFast : isPlayerFast;
+        // isOpponentFast
+        nBayesAttributes[ 1 ] = isPredicting ? isPlayerFast : isOpponentFast;
+        // isOpponentFarAway
+        nBayesAttributes[ 2 ] = ClassifyFarAway( CurrentPlayer.transform.position,
+            currentOpponent.transform.position );
+        // isFacingEachOther
+        nBayesAttributes[ 3 ] = ClassifyFacing( CurrentPlayer.FrontVector,
+            currentOpponent.FrontVector );
+        // isPlayerHealthy
+        nBayesAttributes[ 4 ] = isPredicting ? isOpponentHealthy : isPlayerHealthy;
+        // isOpponentHealthy
+        nBayesAttributes[ 5 ] = isPredicting ? isPlayerHealthy : isOpponentHealthy;
+    }
+
+    private bool ClassifySpeed( Vector3 velocity )
+    {
+        return velocity.magnitude > Ship.ThrustSpeed / 2;
+    }
+
+    private bool ClassifyFarAway( Vector3 pos1, Vector3 pos2 )
+    {
+        return Vector3.Distance( pos1, pos2 ) >= WeaponHelpDist;
+    }
+
+    private bool ClassifyFacing( Vector3 dir1, Vector3 dir2 )
+    {
+        // Front vectors are within 45 degrees.
+        return Vector3.Angle( -dir1, dir2 ) <= 45;
+    }
+
+    private bool ClassifyHealthy( int health )
+    {
+        return health > Ship.Health / 2;
+    }
+
+    public bool PredictIsRolling()
+    {
+        if( !CurrentPlayer || !currentOpponent )
+            return false;
+
+        UpdateNBayesAttributes( true );
+        return nBayes.Predict( nBayesAttributes );
     }
 }

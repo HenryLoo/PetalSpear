@@ -14,7 +14,6 @@ public class AIEngine : MonoBehaviour
     Vector3 thisToTarget;
     private Rigidbody rb;
 
-    public GameController Game;
     private Vector3 targetPos;
     private Vector3 playerPos;
     private Vector3 pickupPos;
@@ -87,17 +86,17 @@ public class AIEngine : MonoBehaviour
     private void GetWorldData()
     {
         // Get player data.
-        if( Game.CurrentPlayer )
+        if( Ship.Game.CurrentPlayer )
         {
-            Vector3 playerVel = Game.CurrentPlayer.GetVelocity() * Time.deltaTime;
-            playerPos = Game.CurrentPlayer.transform.position + playerVel;
+            Vector3 playerVel = Ship.Game.CurrentPlayer.GetVelocity() * Time.deltaTime;
+            playerPos = Ship.Game.CurrentPlayer.transform.position + playerVel;
             //playerRotation = PlayerShip.transform.rotation.eulerAngles.y;
         }
 
         // Get pickup data.
-        if( Game.CurrentPickup )
+        if( Ship.Game.CurrentPickup )
         {
-            pickupPos = Game.CurrentPickup.transform.position;
+            pickupPos = Ship.Game.CurrentPickup.transform.position;
         }
     }
 
@@ -114,7 +113,7 @@ public class AIEngine : MonoBehaviour
         thisToTarget = targetPos - transform.position;
 
         // Fire weapons if available.
-        isFiringHeavy = Ship.HeavyWeapon ? IsFiringHeavy() : false;
+        isFiringHeavy = IsFiringHeavy();
         isFiringStandard = IsFiringStandard();
     }
 
@@ -129,6 +128,12 @@ public class AIEngine : MonoBehaviour
                 FaceTarget();
                 Arrive();
                 Ship.Thrust( thrustAmount );
+
+                // Check if rolling.
+                if( Ship.Game.PredictIsRolling() )
+                {
+                    Ship.DodgeRoll();
+                }
                 break;
             }
 
@@ -179,8 +184,8 @@ public class AIEngine : MonoBehaviour
             }
         }
 
-        // Don't waste ammo if the player is invincible.
-        if( isFiringHeavy && Game.CurrentPlayer.InvincibilityTimer == 0 )
+        // Prioritize using heavy weapon over standard weapon.
+        if( isFiringHeavy )
         {
             Ship.FireHeavy();
         }
@@ -216,27 +221,23 @@ public class AIEngine : MonoBehaviour
         Ship.Rotate( direction );
     }
 
-    private HealthState ClassifyHealth( float health )
+    public bool IsFiringHeavy()
     {
-        if( health == 0 )
-            return HealthState.Dead;
-        else if( health <= 60 )
-            return HealthState.Hurt;
-        else
-            return HealthState.Healthy;
-    }
+        if( !Ship.HeavyWeapon )
+            return false;
 
-    private bool IsFiringHeavy()
-    {
         bool isFiring = IsFiring( Ship.HeavyWeapon );
         Vector3 thisToPlayer = playerPos - transform.position;
         float totalFiringRadius = Ship.HeavyWeapon.NumBullets * Ship.HeavyWeapon.SpreadAngle + MIN_FIRING_RADIUS;
         isFiring &= Vector3.Angle( Ship.FrontVector, thisToPlayer ) <= totalFiringRadius;
 
+        // Don't waste ammo if the player is invincible.
+        isFiring &= ( Ship.Game.CurrentPlayer.InvincibilityTimer == 0 );
+
         return isFiring;
     }
 
-    private bool IsFiringStandard()
+    public bool IsFiringStandard()
     {
         bool isFiring = IsFiring( Ship.StandardWeapon );
         Vector3 thisToPlayer = playerPos - transform.position;
@@ -247,7 +248,10 @@ public class AIEngine : MonoBehaviour
 
     private bool IsFiring( Weapon wpn )
     {
-        bool isFiring = Game.CurrentPlayer;
+        if( !wpn )
+            return false;
+
+        bool isFiring = Ship.Game.CurrentPlayer;
         Vector3 thisToPlayer = playerPos - transform.position;
         float bulletRange = wpn.BulletSpeed * wpn.BulletDuration;
         isFiring &= Vector3.Magnitude( thisToPlayer ) <= bulletRange;
@@ -345,7 +349,7 @@ public class AIEngine : MonoBehaviour
             Action = () =>
             {
                 // Change "get armed" goal value.
-                int getArmedVal = Game.CurrentPickup ?
+                int getArmedVal = Ship.Game.CurrentPickup ?
                     VALUE_GET_ARMED_PRIORITY : VALUE_GET_ARMED;
                 if( getArmedVal != gob.Goals[ 1 ].Value )
                 {
@@ -379,7 +383,7 @@ public class AIEngine : MonoBehaviour
             {
                 // Change "get armed" goal value.
                 // Try to deny the player if they are unarmed.
-                int getArmedVal = ( !Game.CurrentPlayer.HeavyWeapon && Game.CurrentPickup ) ?
+                int getArmedVal = ( !Ship.Game.CurrentPlayer.HeavyWeapon && Ship.Game.CurrentPickup ) ?
                     VALUE_GET_ARMED_PRIORITY : VALUE_GET_ARMED;
 
                 if( getArmedVal != gob.Goals[ 1 ].Value )

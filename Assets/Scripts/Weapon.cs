@@ -4,6 +4,7 @@ using UnityEngine;
 
 public class Weapon : MonoBehaviour
 {
+    public GameController Game;
     public Rigidbody Bullet;
     public string Name;
     public Color Colour;
@@ -95,6 +96,7 @@ public class Weapon : MonoBehaviour
                 bullet.HitSpark = HitSpark;
                 bullet.BlastSize = BlastSize;
                 bullet.Duration = BulletDuration;
+                bullet.Game = Game;
 
                 // Edit trail size and colour.
                 TrailRenderer trail = bullet.GetComponent<TrailRenderer>();

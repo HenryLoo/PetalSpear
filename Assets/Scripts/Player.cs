@@ -42,14 +42,8 @@ public class Player : MonoBehaviour
 
         if( Input.GetButtonDown( "Dodge Roll" ) )
         {
-            if ( rotate < 0 )
+            if( Ship.DodgeRoll() )
             {
-                Ship.DodgeRoll( true );
-                RollSound.Play();
-            }
-            else if( rotate > 0 )
-            {
-                Ship.DodgeRoll( false );
                 RollSound.Play();
             }
         }
