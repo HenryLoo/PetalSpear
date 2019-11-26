@@ -220,7 +220,6 @@ public class GameController : MonoBehaviour
             if( playerDestroyed && playerSpawnTimer > 0 )
             {
                 playerSpawnTimer -= Time.deltaTime;
-                playerSpawnTimer = Mathf.Max( 0, playerSpawnTimer );
                 playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
             }
             else
