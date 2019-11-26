@@ -55,12 +55,12 @@ public class GameController : MonoBehaviour
     public Canvas TitleUI;
 
     public Canvas GameUI;
-    public Text TimeText;
+    //public Text TimeText;
     public Text PlayerScoreText;
     public Text OpponentScoreText;
     public Text PlayerWeaponText;
     public Text OpponentWeaponText;
-    private float gameTime;
+    //private float gameTime;
     private int playerScore;
     private int opponentScore;
     public RectTransform PlayerHealth;
@@ -71,8 +71,9 @@ public class GameController : MonoBehaviour
     public Text WinText;
     private const string PLAYER_WIN = "PLAYER WINS!";
     private const string OPPONENT_WIN = "AI WINS!";
-    private const string NO_WIN = "TIE GAME!";
+    //private const string NO_WIN = "TIE GAME!";
     private AudioSource endSound;
+    public int NumLives;
 
     private GameState currentState = GameState.Title;
 
@@ -178,7 +179,10 @@ public class GameController : MonoBehaviour
         UpdateWeaponText();
 
         // Update game time.
-        UpdateTime();
+        //UpdateTime();
+
+        // Check game end conditions.
+        CheckEndGame();
 
         // Weapon spawning.
         if( !CurrentPickup )
@@ -213,7 +217,7 @@ public class GameController : MonoBehaviour
                 playerDestroyed = CreateRedText( playerPos );
 
                 // Player just died.
-                ++opponentScore;
+                --playerScore;
                 UpdateScore();
             }
 
@@ -243,7 +247,7 @@ public class GameController : MonoBehaviour
                 opponentDestroyed = CreateRedText( opponentPos );
 
                 // Opponent just died.
-                ++playerScore;
+                --opponentScore;
                 UpdateScore();
             }
 
@@ -320,13 +324,13 @@ public class GameController : MonoBehaviour
         GameUI.enabled = true;
 
         // Reset scores.
-        playerScore = 0;
-        opponentScore = 0;
+        playerScore = NumLives;
+        opponentScore = NumLives;
         UpdateScore();
 
         // Reset timers.
         ResetWeaponSpawnTimer();
-        gameTime = GameDuration;
+        //gameTime = GameDuration;
 
         // Spawn ships.
         SpawnPlayer( false );
@@ -524,51 +528,75 @@ public class GameController : MonoBehaviour
         OpponentWeaponText.text = opponentWeapon;
     }
 
-    private void UpdateTime()
+    //private void UpdateTime()
+    //{
+    //    gameTime -= Time.deltaTime;
+    //    TimeSpan timeSpan = TimeSpan.FromSeconds( gameTime );
+    //    string timeText = string.Format( "{0:D2}:{1:D2}", timeSpan.Minutes, timeSpan.Seconds );
+    //    TimeText.text = timeText;
+
+    //    // Time is up, so end the game.
+    //    if( gameTime <= 0 )
+    //    {
+    //        gameTime = 0;
+    //        currentState = GameState.Ended;
+    //        endSound.Play();
+
+    //        EndUI.enabled = true;
+    //        string msg;
+    //        // Player wins.
+    //        if( playerScore > opponentScore )
+    //        {
+    //            msg = PLAYER_WIN;
+    //            if( currentOpponent )
+    //                currentOpponent.Die();
+    //        }
+    //        // Opponent wins.
+    //        else if( opponentScore > playerScore )
+    //        {
+    //            msg = OPPONENT_WIN;
+    //            if( CurrentPlayer )
+    //                CurrentPlayer.Die();
+    //        }
+    //        // Nobody wins.
+    //        else
+    //        {
+    //            msg = NO_WIN;
+    //            if( currentOpponent )
+    //                currentOpponent.Die();
+    //            if( CurrentPlayer )
+    //                CurrentPlayer.Die();
+    //        }
+
+    //        if( CurrentPickup )
+    //            Destroy( CurrentPickup.gameObject );
+
+    //        WinText.text = msg;
+    //    }
+    //}
+
+    private void CheckEndGame()
     {
-        gameTime -= Time.deltaTime;
-        TimeSpan timeSpan = TimeSpan.FromSeconds( gameTime );
-        string timeText = string.Format( "{0:D2}:{1:D2}", timeSpan.Minutes, timeSpan.Seconds );
-        TimeText.text = timeText;
-
-        // Time is up, so end the game.
-        if( gameTime <= 0 )
+        if( opponentScore == 0 )
         {
-            gameTime = 0;
-            currentState = GameState.Ended;
-            endSound.Play();
-
-            EndUI.enabled = true;
-            string msg;
-            // Player wins.
-            if( playerScore > opponentScore )
-            {
-                msg = PLAYER_WIN;
-                if( currentOpponent )
-                    currentOpponent.Die();
-            }
-            // Opponent wins.
-            else if( opponentScore > playerScore )
-            {
-                msg = OPPONENT_WIN;
-                if( CurrentPlayer )
-                    CurrentPlayer.Die();
-            }
-            // Nobody wins.
-            else
-            {
-                msg = NO_WIN;
-                if( currentOpponent )
-                    currentOpponent.Die();
-                if( CurrentPlayer )
-                    CurrentPlayer.Die();
-            }
-
-            if( CurrentPickup )
-                Destroy( CurrentPickup.gameObject );
-
-            WinText.text = msg;
+            SetWin( PLAYER_WIN );
         }
+        else if( playerScore == 0 )
+        {
+            SetWin( OPPONENT_WIN );
+        }
+    }
+
+    private void SetWin( string msg )
+    {
+        currentState = GameState.Ended;
+        EndUI.enabled = true;
+        endSound.Play();
+
+        if( CurrentPickup )
+            Destroy( CurrentPickup.gameObject );
+
+        WinText.text = msg;
     }
 
     // Register which ship picked up the weapon.

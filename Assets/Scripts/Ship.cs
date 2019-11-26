@@ -12,6 +12,8 @@ public class Ship : MonoBehaviour
 
     public float RotationSpeed = 180;
     public float ThrustSpeed = 10;
+    private float DodgeSpeed;
+    private const float DODGE_SPEED_MULTIPLIER = 40;
 
     public WeaponTypes WeaponTypes;
     public Weapon StandardWeapon;
@@ -38,6 +40,9 @@ public class Ship : MonoBehaviour
 
     private Animator animator;
 
+    private bool isRollingLeft;
+    private bool isRollingRight;
+
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
@@ -49,6 +54,8 @@ public class Ship : MonoBehaviour
     // Use this for initialization
     void Start()
     {
+        DodgeSpeed = ThrustSpeed * DODGE_SPEED_MULTIPLIER;
+
         Weapon standard = WeaponTypes.GetWeapon( WeaponTypes.Type.Standard );
         StandardWeapon = ( Weapon ) Instantiate( standard, transform.position, transform.rotation );
         StandardWeapon.transform.SetParent( transform );
@@ -113,13 +120,18 @@ public class Ship : MonoBehaviour
             rb.AddForce( currentVelocity );
         }
 
-        if( IsRollingLeft() )
+        // Apply force on first frame of roll.
+        if( isRollingLeft )
         {
-            rb.AddForce( -transform.right * ThrustSpeed );
+            rb.velocity = Vector3.zero;
+            rb.AddForce( -transform.right * DodgeSpeed );
+            isRollingLeft = false;
         }
-        else if( IsRollingRight() )
+        else if( isRollingRight )
         {
-            rb.AddForce( transform.right * ThrustSpeed );
+            rb.velocity = Vector3.zero;
+            rb.AddForce( transform.right * DodgeSpeed );
+            isRollingRight = false;
         }
     }
 
@@ -199,9 +211,15 @@ public class Ship : MonoBehaviour
             return false;
 
         if( currentRotationDirection < 0 )
+        {
             animator.Play( "RollLeft" );
+            isRollingLeft = true;
+        }
         else if( currentRotationDirection > 0 )
+        {
             animator.Play( "RollRight" );
+            isRollingRight = true;
+        }
 
         InvincibilityTimer = 0.2f;
         return true;
