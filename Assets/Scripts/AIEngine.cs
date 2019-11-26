@@ -51,6 +51,8 @@ public class AIEngine : MonoBehaviour
 
     private GoalOrientedBehaviour.OverallUtility gob;
 
+    public DodgeRollLearner DodgeRollLearner;
+
     enum AIBehaviour
     {
         PursuePlayer,
@@ -187,10 +189,12 @@ public class AIEngine : MonoBehaviour
         // Prioritize using heavy weapon over standard weapon.
         if( isFiringHeavy )
         {
+            CreateDodgeRollLearner( Ship.HeavyWeapon );
             Ship.FireHeavy();
         }
         else if( isFiringStandard )
         {
+            CreateDodgeRollLearner( Ship.StandardWeapon );
             Ship.FireStandard();
         }
     }
@@ -433,5 +437,16 @@ public class AIEngine : MonoBehaviour
         AIBehaviour behaviour;
         actionToBehaviour.TryGetValue( action.Name, out behaviour );
         currentBehaviour = behaviour;
+    }
+
+    private void CreateDodgeRollLearner( Weapon wpn )
+    {
+        // Try to learn dodge rolling from the player.
+        if( wpn.CanFire() )
+        {
+            DodgeRollLearner learner = ( DodgeRollLearner ) Instantiate( DodgeRollLearner );
+            learner.Duration = wpn.BulletDuration;
+            learner.Game = Ship.Game;
+        }
     }
 }

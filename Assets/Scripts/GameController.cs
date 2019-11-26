@@ -42,7 +42,6 @@ public class GameController : MonoBehaviour
 
     public Ship CurrentPlayer;
     private Ship currentOpponent;
-    private AIEngine currentAI;
     public WeaponPickup CurrentPickup;
 
     public TextMesh RedText;
@@ -91,9 +90,6 @@ public class GameController : MonoBehaviour
     // Output: isDodgeRolling?
     private NaiveBayesClassifier nBayes;
     private const int NUM_NBAYES_ATTRIBUTES = 6;
-    public bool IsLearningNBayes = false;
-    private const float NBAYES_LEARN_DURATION = 1.0f;
-    private float nBayesLearnTimer;
     private List<bool> nBayesAttributes;
 
     enum GameState
@@ -262,26 +258,6 @@ public class GameController : MonoBehaviour
                 isReadyToSpawnOpponent = true;
             }
         }
-
-        // Enable learning with Naive Bayes when the AI is firing.
-        IsLearningNBayes = ( currentAI && 
-            ( currentAI.IsFiringHeavy() || currentAI.IsFiringStandard() ) );
-
-        //// Learn negative examples.
-        //if( IsLearningNBayes )
-        //{
-        //    nBayesLearnTimer += Time.deltaTime;
-        //    if( nBayesLearnTimer >= NBAYES_LEARN_DURATION )
-        //    {
-        //        UpdateNBayes( false );
-        //        nBayesLearnTimer = 0;
-        //    }
-        //}
-        //// Reset the timer.
-        //else
-        //{
-        //    nBayesLearnTimer = 0;
-        //}
     }
 
     private void UpdateEnded()
@@ -435,7 +411,6 @@ public class GameController : MonoBehaviour
             currentOpponent.transform.position, currentOpponent.transform.rotation );
         opponent.transform.SetParent( currentOpponent.transform );
         opponent.Ship = currentOpponent;
-        currentAI = opponent;
     }
 
     private Ship SpawnShip( bool isRandomPos, int team, Vector2 spawnPos, float spawnRot )

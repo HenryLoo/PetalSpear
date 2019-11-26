@@ -4,7 +4,6 @@ using UnityEngine;
 
 public class Bullet : MonoBehaviour
 {
-    public GameController Game;
     public GameObject HitSpark;
     public BlastZone BlastZone;
 
@@ -42,23 +41,13 @@ public class Bullet : MonoBehaviour
         }
 
         Ship otherShip = other.gameObject.GetComponent<Ship>();
-        if( otherShip && otherShip.Team != Team)
+        if( otherShip && otherShip.Team != Team && 
+            otherShip.InvincibilityTimer == 0 )
         {
-            // If the player was hit, try to learn dodging.
-            if( Game )
-            {
-                Player player = otherShip.GetComponentInChildren<Player>();
-                Game.UpdateNBayes( player && otherShip.IsRolling() );
-            }
-            
-            if( otherShip.InvincibilityTimer == 0 )
-            {
-                // If explosive, don't deal damage on contact.
-                if( !TriggerBlast() )
-                    otherShip.Health -= Damage;
-                ProcessHitSpark();
-            }
-
+            // If explosive, don't deal damage on contact.
+            if( !TriggerBlast() )
+                otherShip.Health -= Damage;
+            ProcessHitSpark();
             return;
         }
     }

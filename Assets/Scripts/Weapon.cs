@@ -54,10 +54,15 @@ public class Weapon : MonoBehaviour
         }
     }
 
+    public bool CanFire()
+    {
+        return currentFireDelay == 0 && ( Ammo > 0 || Ammo == -1 );
+    }
+
     public void Fire( Vector3 position, Vector3 direction, Vector3 currentVelocity, int team )
     {
         // -1 is infinite ammo.
-        if( currentFireDelay == 0 && ( Ammo > 0 || Ammo == -1 ) )
+        if( CanFire() )
         {
             Vector3 currentDir = direction;
             if( NumBullets > 1 )
@@ -96,7 +101,6 @@ public class Weapon : MonoBehaviour
                 bullet.HitSpark = HitSpark;
                 bullet.BlastSize = BlastSize;
                 bullet.Duration = BulletDuration;
-                bullet.Game = Game;
 
                 // Edit trail size and colour.
                 TrailRenderer trail = bullet.GetComponent<TrailRenderer>();
