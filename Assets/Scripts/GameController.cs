@@ -126,7 +126,7 @@ public class GameController : MonoBehaviour
     void Update()
     {
         // Title screen.
-        switch(currentState)
+        switch( currentState )
         {
             case GameState.Title:
             {
@@ -220,6 +220,7 @@ public class GameController : MonoBehaviour
             if( playerDestroyed && playerSpawnTimer > 0 )
             {
                 playerSpawnTimer -= Time.deltaTime;
+                playerSpawnTimer = Mathf.Max( 0, playerSpawnTimer );
                 playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
             }
             else
@@ -333,7 +334,7 @@ public class GameController : MonoBehaviour
 
         if( pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE )
         {
-            if ( nextPickupAction == string.Empty )
+            if( nextPickupAction == string.Empty )
                 nextPickupAction = pickupNGram.PredictNextAction( pickupNGramSequence );
 
             // A ship is being helped...
@@ -482,10 +483,10 @@ public class GameController : MonoBehaviour
     {
         // Update player's weapon text.
         string playerWeapon = "";
-        if( CurrentPlayer && CurrentPlayer.HeavyWeapon && 
+        if( CurrentPlayer && CurrentPlayer.HeavyWeapon &&
             CurrentPlayer.HeavyWeapon.Ammo > 0 )
         {
-            playerWeapon = CurrentPlayer.HeavyWeapon.Name + 
+            playerWeapon = CurrentPlayer.HeavyWeapon.Name +
                 " " + CurrentPlayer.HeavyWeapon.Ammo + "x";
         }
 
@@ -493,7 +494,7 @@ public class GameController : MonoBehaviour
 
         // Update opponent's weapon text.
         string opponentWeapon = "";
-        if( currentOpponent && currentOpponent.HeavyWeapon && 
+        if( currentOpponent && currentOpponent.HeavyWeapon &&
             currentOpponent.HeavyWeapon.Ammo > 0 )
         {
             opponentWeapon = currentOpponent.HeavyWeapon.Name +
