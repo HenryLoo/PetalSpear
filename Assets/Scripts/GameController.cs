@@ -611,8 +611,8 @@ public class GameController : MonoBehaviour
 
     private void UpdateNBayesAttributes( bool isPredicting )
     {
-        bool isPlayerFast = ClassifySpeed( CurrentPlayer.GetVelocity() );
-        bool isOpponentFast = ClassifySpeed( currentOpponent.GetVelocity() );
+        bool isPlayerFast = ClassifySpeed( CurrentPlayer );
+        bool isOpponentFast = ClassifySpeed( currentOpponent );
         bool isPlayerHealthy = ClassifyHealthy( CurrentPlayer.Health );
         bool isOpponentHealthy = ClassifyHealthy( currentOpponent.Health );
 
@@ -632,9 +632,9 @@ public class GameController : MonoBehaviour
         nBayesAttributes[ 5 ] = isPredicting ? isPlayerHealthy : isOpponentHealthy;
     }
 
-    private bool ClassifySpeed( Vector3 velocity )
+    private bool ClassifySpeed( Ship ship )
     {
-        return velocity.magnitude > Ship.ThrustSpeed / 2;
+        return ship.GetVelocity().magnitude > Ship.ThrustSpeed / 2 && !ship.IsRolling();
     }
 
     private bool ClassifyFarAway( Vector3 pos1, Vector3 pos2 )
