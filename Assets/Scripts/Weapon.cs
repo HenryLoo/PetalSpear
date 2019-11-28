@@ -108,6 +108,12 @@ public class Weapon : MonoBehaviour
                     homing.Game = Game;
                 }
 
+                EmitterBullet emitter = bullet.GetComponent<EmitterBullet>();
+                if( emitter )
+                {
+                    emitter.Game = Game;
+                }
+
                 // Edit trail size and colour.
                 TrailRenderer trail = bullet.GetComponent<TrailRenderer>();
                 trail.material.color = Colour;

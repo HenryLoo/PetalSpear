@@ -38,9 +38,4 @@ public class HomingBullet : Bullet
         if( target )
             rb.AddForce( thisToTarget * bulletSpeed * 2 );
     }
-
-    new void OnTriggerEnter( Collider other )
-    {
-        base.OnTriggerEnter( other );
-    }
 }
