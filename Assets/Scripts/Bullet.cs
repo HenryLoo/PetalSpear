@@ -11,7 +11,7 @@ public class Bullet : MonoBehaviour
     public int Damage;
     public float BlastSize;
     public float Duration;
-    private float currentDuration;
+    protected float currentDuration;
 
     // Use this for initialization
     void Start()
@@ -20,7 +20,7 @@ public class Bullet : MonoBehaviour
     }
 
     // Update is called once per frame
-    void Update()
+    protected void Update()
     {
         currentDuration += Time.deltaTime;
         if (currentDuration >= Duration)
@@ -31,7 +31,7 @@ public class Bullet : MonoBehaviour
         }
     }
 
-    private void OnTriggerEnter( Collider other )
+    protected void OnTriggerEnter( Collider other )
     {
         if( other.gameObject.tag == "Wall" )
         {

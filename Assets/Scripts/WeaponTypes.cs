@@ -22,6 +22,7 @@ public class WeaponTypes : MonoBehaviour
         Vulcan,
         Cannon,
         Flak,
+        Hornet,
         PetalSpear
     }
 

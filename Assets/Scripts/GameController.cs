@@ -41,7 +41,7 @@ public class GameController : MonoBehaviour
     public AIEngine AIEngine;
 
     public Ship CurrentPlayer;
-    private Ship currentOpponent;
+    public Ship CurrentOpponent;
     public WeaponPickup CurrentPickup;
 
     public TextMesh RedText;
@@ -230,9 +230,9 @@ public class GameController : MonoBehaviour
         }
 
         // Opponent spawning.
-        if( currentOpponent )
+        if( CurrentOpponent )
         {
-            opponentPos = currentOpponent.transform.position;
+            opponentPos = CurrentOpponent.transform.position;
         }
         else
         {
@@ -281,8 +281,8 @@ public class GameController : MonoBehaviour
         EndUI.enabled = false;
 
         // Delete existing objects.
-        if( currentOpponent )
-            Destroy( currentOpponent.gameObject );
+        if( CurrentOpponent )
+            Destroy( CurrentOpponent.gameObject );
         if( CurrentPlayer )
             Destroy( CurrentPlayer.gameObject );
         if( CurrentPickup )
@@ -338,11 +338,11 @@ public class GameController : MonoBehaviour
 
             // A ship is being helped...
             bool isHelpingPlayer = ( nextPickupAction == N_GRAM_OPPONENT_ACTION && CurrentPlayer );
-            bool isHelpingOpponent = ( nextPickupAction == N_GRAM_PLAYER_ACTION && currentOpponent );
+            bool isHelpingOpponent = ( nextPickupAction == N_GRAM_PLAYER_ACTION && CurrentOpponent );
             if( nextPickupAction != string.Empty )
             {
-                bool tooClose = currentOpponent && CurrentPlayer &&
-                    Vector3.Distance( currentOpponent.transform.position,
+                bool tooClose = CurrentOpponent && CurrentPlayer &&
+                    Vector3.Distance( CurrentOpponent.transform.position,
                     CurrentPlayer.transform.position ) < WeaponHelpDist;
 
                 if( !tooClose && ( isHelpingPlayer || isHelpingOpponent ) )
@@ -353,7 +353,7 @@ public class GameController : MonoBehaviour
                     Vector3 weaponDist = new Vector3( x, 0, z );
 
                     position = ( nextPickupAction == N_GRAM_PLAYER_ACTION ) ?
-                        currentOpponent.transform.position :
+                        CurrentOpponent.transform.position :
                         CurrentPlayer.transform.position;
                     position += weaponDist;
 
@@ -403,14 +403,14 @@ public class GameController : MonoBehaviour
     private void SpawnOpponent( bool isRandomPos )
     {
         // Opponent already exists, so don't spawn another one.
-        if( currentOpponent )
+        if( CurrentOpponent )
             return;
 
-        currentOpponent = SpawnShip( isRandomPos, 1, OpponentSpawnPos, OpponentSpawnRot );
+        CurrentOpponent = SpawnShip( isRandomPos, 1, OpponentSpawnPos, OpponentSpawnRot );
         AIEngine opponent = ( AIEngine ) Instantiate( AIEngine,
-            currentOpponent.transform.position, currentOpponent.transform.rotation );
-        opponent.transform.SetParent( currentOpponent.transform );
-        opponent.Ship = currentOpponent;
+            CurrentOpponent.transform.position, CurrentOpponent.transform.rotation );
+        opponent.transform.SetParent( CurrentOpponent.transform );
+        opponent.Ship = CurrentOpponent;
     }
 
     private Ship SpawnShip( bool isRandomPos, int team, Vector2 spawnPos, float spawnRot )
@@ -469,9 +469,9 @@ public class GameController : MonoBehaviour
 
         // Update opponent's health bar.
         float opponentOffset = maxBarWidth;
-        if( currentOpponent )
+        if( CurrentOpponent )
         {
-            float opponentBarWidth = ( float ) currentOpponent.Health / Ship.Health * maxBarWidth;
+            float opponentBarWidth = ( float ) CurrentOpponent.Health / Ship.Health * maxBarWidth;
             opponentOffset = maxBarWidth - opponentBarWidth;
         }
 
@@ -493,11 +493,11 @@ public class GameController : MonoBehaviour
 
         // Update opponent's weapon text.
         string opponentWeapon = "";
-        if( currentOpponent && currentOpponent.HeavyWeapon &&
-            currentOpponent.HeavyWeapon.Ammo > 0 )
+        if( CurrentOpponent && CurrentOpponent.HeavyWeapon &&
+            CurrentOpponent.HeavyWeapon.Ammo > 0 )
         {
-            opponentWeapon = currentOpponent.HeavyWeapon.Name +
-                " " + currentOpponent.HeavyWeapon.Ammo + "x";
+            opponentWeapon = CurrentOpponent.HeavyWeapon.Name +
+                " " + CurrentOpponent.HeavyWeapon.Ammo + "x";
         }
 
         OpponentWeaponText.text = opponentWeapon;
@@ -593,7 +593,7 @@ public class GameController : MonoBehaviour
 
     public void UpdateNBayes( bool isPositiveExample )
     {
-        if( !CurrentPlayer || !currentOpponent )
+        if( !CurrentPlayer || !CurrentOpponent )
             return;
 
         UpdateNBayesAttributes( false );
@@ -612,9 +612,9 @@ public class GameController : MonoBehaviour
     private void UpdateNBayesAttributes( bool isPredicting )
     {
         bool isPlayerFast = ClassifySpeed( CurrentPlayer );
-        bool isOpponentFast = ClassifySpeed( currentOpponent );
+        bool isOpponentFast = ClassifySpeed( CurrentOpponent );
         bool isPlayerHealthy = ClassifyHealthy( CurrentPlayer.Health );
-        bool isOpponentHealthy = ClassifyHealthy( currentOpponent.Health );
+        bool isOpponentHealthy = ClassifyHealthy( CurrentOpponent.Health );
 
         // isPlayerFast
         nBayesAttributes[ 0 ] = isPredicting ? isOpponentFast : isPlayerFast;
@@ -622,10 +622,10 @@ public class GameController : MonoBehaviour
         nBayesAttributes[ 1 ] = isPredicting ? isPlayerFast : isOpponentFast;
         // isOpponentFarAway
         nBayesAttributes[ 2 ] = ClassifyFarAway( CurrentPlayer.transform.position,
-            currentOpponent.transform.position );
+            CurrentOpponent.transform.position );
         // isFacingEachOther
         nBayesAttributes[ 3 ] = ClassifyFacing( CurrentPlayer.FrontVector,
-            currentOpponent.FrontVector );
+            CurrentOpponent.FrontVector );
         // isPlayerHealthy
         nBayesAttributes[ 4 ] = isPredicting ? isOpponentHealthy : isPlayerHealthy;
         // isOpponentHealthy
@@ -655,7 +655,7 @@ public class GameController : MonoBehaviour
 
     public bool PredictIsRolling()
     {
-        if( !CurrentPlayer || !currentOpponent )
+        if( !CurrentPlayer || !CurrentOpponent )
             return false;
 
         UpdateNBayesAttributes( true );

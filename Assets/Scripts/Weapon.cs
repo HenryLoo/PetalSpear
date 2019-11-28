@@ -102,6 +102,12 @@ public class Weapon : MonoBehaviour
                 bullet.BlastSize = BlastSize;
                 bullet.Duration = BulletDuration;
 
+                HomingBullet homing = bullet.GetComponent<HomingBullet>();
+                if( homing )
+                {
+                    homing.Game = Game;
+                }
+
                 // Edit trail size and colour.
                 TrailRenderer trail = bullet.GetComponent<TrailRenderer>();
                 trail.material.color = Colour;
