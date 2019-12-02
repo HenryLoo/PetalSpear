@@ -24,6 +24,7 @@ public class WeaponTypes : MonoBehaviour
         Flak,
         Hornet,
         Pulsar,
+        SpellCard,
         PetalSpear
     }
 
