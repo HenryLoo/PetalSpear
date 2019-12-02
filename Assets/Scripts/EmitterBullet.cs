@@ -5,25 +5,28 @@ using UnityEngine;
 public class EmitterBullet : Bullet
 {
     public GameController Game;
-    private Ship target;
     private float emitterSpeed;
-    private Rigidbody rb;
-    private Vector3 thisToTarget;
 
     public Weapon Weapon;
     private Weapon thisWeapon;
 
-    void Awake()
+    public bool IsTargetingEnemy;
+    private Ship target;
+    private Vector3 thisToTarget;
+
+    public float RotationSpeed;
+
+    new void Awake()
     {
-        rb = GetComponent<Rigidbody>();
+        base.Awake();
         thisWeapon = Instantiate( Weapon );
         thisWeapon.transform.SetParent( transform );
     }
 
     // Use this for initialization
-    void Start()
+    new void Start()
     {
-        target = Team == 0 ? Game.CurrentOpponent : Game.CurrentPlayer;
+        base.Start();
     }
 
     // Update is called once per frame
@@ -34,12 +37,24 @@ public class EmitterBullet : Bullet
 
         base.Update();
 
-        if( target )
+        if( IsTargetingEnemy )
         {
-            thisToTarget = Vector3.Normalize( target.transform.position - transform.position );
+            target = Team == 0 ? Game.CurrentOpponent : Game.CurrentPlayer;
+            if( target )
+                thisToTarget = Vector3.Normalize( target.transform.position - transform.position );
+        }
+        else
+        {
+            thisToTarget = Vector3.Normalize( transform.forward );
+        }
+
+        if( target || !IsTargetingEnemy )
+        {
             thisWeapon.Fire( transform.position, thisToTarget, rb.velocity, Team );
         }
         thisWeapon.UpdateValues();
+
+        transform.rotation *= Quaternion.Euler( 0, RotationSpeed * Time.deltaTime, 0 );
     }
 
     new void OnTriggerEnter( Collider other )

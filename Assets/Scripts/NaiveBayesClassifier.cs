@@ -48,14 +48,14 @@ public class NaiveBayesClassifier
         float x = 0;
         if( numNegativeExamples > 0 )
         {
-            x = NaiveProbabilities( attributes, numPositiveAttributes,
+            x = naiveProbabilities( attributes, numPositiveAttributes,
                 ( float ) numPositiveExamples, ( float ) numNegativeExamples );
         }
 
         float y = 0;
         if( numPositiveExamples > 0 )
         {
-            y = NaiveProbabilities( attributes, numNegativeAttributes,
+            y = naiveProbabilities( attributes, numNegativeAttributes,
                 ( float ) numNegativeExamples, ( float ) numPositiveExamples );
         }
 
@@ -67,7 +67,7 @@ public class NaiveBayesClassifier
         return ( x >= y );
     }
 
-    private float NaiveProbabilities( List<bool> attributes, List<int> counts, float m, float n )
+    private float naiveProbabilities( List<bool> attributes, List<int> counts, float m, float n )
     {
         // Compute the prior.
         float prior = m / ( m + n );

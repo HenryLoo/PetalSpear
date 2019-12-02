@@ -7,17 +7,12 @@ public class HomingBullet : Bullet
     public GameController Game;
     private Ship target;
     private float bulletSpeed;
-    private Rigidbody rb;
     private Vector3 thisToTarget;
 
-    void Awake()
-    {
-        rb = GetComponent<Rigidbody>();
-    }
-
     // Use this for initialization
-    void Start()
+    new void Start()
     {
+        base.Start();
         target = Team == 0 ? Game.CurrentOpponent : Game.CurrentPlayer;
     }
 
