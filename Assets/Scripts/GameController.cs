@@ -305,6 +305,9 @@ public class GameController : MonoBehaviour
         UpdateScore();
 
         // Reset timers.
+        isReadyToSpawnPlayer = true;
+        isReadyToSpawnOpponent = true;
+        isReadyToSpawnWeapon = true;
         ResetWeaponSpawnTimer();
         //gameTime = GameDuration;
 
