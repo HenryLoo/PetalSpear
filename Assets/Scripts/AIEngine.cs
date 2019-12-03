@@ -257,7 +257,12 @@ public class AIEngine : MonoBehaviour
 
         bool isFiring = Ship.Game.CurrentPlayer;
         Vector3 thisToPlayer = playerPos - transform.position;
-        float bulletRange = Mathf.Max( 1.0f, wpn.BulletSpeed ) * wpn.BulletDuration;
+        float bulletRange = wpn.BulletSpeed * wpn.BulletDuration;
+
+        // Don't allow a bullet range of 0.
+        if( bulletRange == 0 )
+            bulletRange = ArrivalRadius;
+
         isFiring &= Vector3.Magnitude( thisToPlayer ) <= bulletRange;
         return isFiring;
     }
