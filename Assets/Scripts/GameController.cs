@@ -601,13 +601,13 @@ public class GameController : MonoBehaviour
 
         UpdateNBayesAttributes( false );
 
-        Debug.Log( "Updating NBayes: isPlayerFast: " + nBayesAttributes[ 0 ] +
-            ", isOpponentFast: " + nBayesAttributes[ 1 ] +
-            ", isOpponentFarAway: " + nBayesAttributes[ 2 ] +
-            ", isFacingEachOther: " + nBayesAttributes[ 3 ] +
-            ", isPlayerHealthy: " + nBayesAttributes[ 4 ] +
-            ", isOpponentHealthy: " + nBayesAttributes[ 5 ] +
-            ", isPositiveExample: " + isPositiveExample );
+        //Debug.Log( "Updating NBayes: isPlayerFast: " + nBayesAttributes[ 0 ] +
+        //    ", isOpponentFast: " + nBayesAttributes[ 1 ] +
+        //    ", isOpponentFarAway: " + nBayesAttributes[ 2 ] +
+        //    ", isFacingEachOther: " + nBayesAttributes[ 3 ] +
+        //    ", isPlayerHealthy: " + nBayesAttributes[ 4 ] +
+        //    ", isOpponentHealthy: " + nBayesAttributes[ 5 ] +
+        //    ", isPositiveExample: " + isPositiveExample );
 
         nBayes.Update( nBayesAttributes, isPositiveExample );
     }

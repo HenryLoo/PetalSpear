@@ -36,7 +36,7 @@ public class NGramPredictor
         // Split the sequence into a key and a value.
         string key = GetKeyFromList( actions.GetRange( 0, nValue - 1 ) );
         string value = actions[ nValue - 1 ];
-        //Debug.Log( "NGrams key: " + key + ", value: " + value );
+        Debug.Log( "NGrams register: key: " + key + ", value: " + value );
 
         // Try to get the data structure.
         KeyDataRecord keyData;
@@ -98,7 +98,7 @@ public class NGramPredictor
             }
         }
 
-        //Debug.Log( "NGrams Predict: " + bestAction );
+        Debug.Log( "NGrams Predict: " + bestAction );
         return bestAction;
     }
 

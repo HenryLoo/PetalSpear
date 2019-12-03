@@ -63,7 +63,7 @@ public class NaiveBayesClassifier
         if( x == 0 && y == 0 )
             return false;
 
-        //Debug.Log( "Positive: " + x + ", Negative: " + y );
+        //Debug.Log( "NBayes predict: Positive: " + x + ", Negative: " + y );
         return ( x >= y );
     }
 
