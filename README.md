@@ -10,6 +10,9 @@ By default, both ships have a standard weapon with infinite ammunition to fire w
 
 Both ships start with five lives. Each time a ship is destroyed, their lives are reduced by one. The first ship to reduce their opponent’s number of lives to zero is the winner. Ships respawn after 3 seconds at a random location in the arena.
 
+## Download
+Check [releases](https://github.com/HenryLoo/PetalSpear/releases) for the latest build.
+
 ---
 
 Made by: Henry Loo
