@@ -3,6 +3,8 @@ A top-down arena (space) shooter game. Play 1v1 against an AI opponent.
 Made in Unity and designed for PC.
 The game was created for non-profit, educational purposes.
 
+See gameplay demo [here](https://www.youtube.com/watch?v=ncRLTMDX1NU).
+
 ## Game Rules
 Both the player and the AI opponent control their own ship and are both constrained by the same movement rules. Ships can thrust forward and backward in the direction that they are facing. To change direction, ships can rotate at constant angular velocity clockwise or counterclockwise. There is also no deceleration, so the ship will need to manually thrust in the opposite direction in order to slow down. Ships can also perform a dodge roll either toward the left or right. Performing a dodge roll will also grant that ship 0.2 seconds of invincibility.
 
