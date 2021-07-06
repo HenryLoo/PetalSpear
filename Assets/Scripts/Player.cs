@@ -5,6 +5,7 @@ using UnityEngine;
 public class Player : MonoBehaviour
 {
     public Ship Ship;
+    public InputScheme InputScheme;
 
     public AudioSource ThrustSound;
     public AudioSource BounceSound;
@@ -19,38 +20,38 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        float thrust = Input.GetAxis( "Thrust" );
-        Ship.Thrust( thrust );
-        if( thrust != 0 && !ThrustSound.isPlaying )
+        float thrust = Input.GetAxis(InputScheme.Thrust);
+        Ship.Thrust(thrust);
+        if (thrust != 0 && !ThrustSound.isPlaying)
             ThrustSound.Play();
-        else if( thrust == 0 )
+        else if (thrust == 0)
             ThrustSound.Stop();
 
-        float rotate = Input.GetAxis( "Rotate" );
-        Ship.Rotate( rotate );
+        float rotate = Input.GetAxis(InputScheme.Rotate);
+        Ship.Rotate(rotate);
 
-        float fireStandard = Input.GetAxis( "Standard Weapon" );
-        float fireHeavy = Input.GetAxis( "Heavy Weapon" );
-        if( fireHeavy != 0 )
+        float fireStandard = Input.GetAxis(InputScheme.StandardWeapon);
+        float fireHeavy = Input.GetAxis(InputScheme.HeavyWeapon);
+        if (fireHeavy != 0)
         {
             Ship.FireHeavy();
         }
-        else if( fireStandard != 0 )
+        else if (fireStandard != 0)
         {
             Ship.FireStandard();
         }
 
-        if( Input.GetButtonDown( "Dodge Roll" ) )
+        if (Input.GetButtonDown(InputScheme.DodgeRoll))
         {
-            if( Ship.DodgeRoll() )
+            if (Ship.DodgeRoll())
             {
                 RollSound.Play();
             }
         }
     }
-    void OnCollisionEnter( Collision other )
+    void OnCollisionEnter(Collision other)
     {
-        if( other.gameObject.tag == "Wall" )
+        if (other.gameObject.tag == "Wall")
         {
             BounceSound.Play();
         }

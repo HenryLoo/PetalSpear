@@ -9,6 +9,10 @@ public class GameController : MonoBehaviour
     public Vector2 LevelXBounds;
     public Vector2 LevelZBounds;
 
+    public bool IsAI = true;
+    public InputScheme Player1Input;
+    public InputScheme Player2Input;
+
     public Vector2 PlayerSpawnPos;
     public float PlayerSpawnRot = 0;
     public Vector2 OpponentSpawnPos;
@@ -36,6 +40,10 @@ public class GameController : MonoBehaviour
     private bool isReadyToSpawnWeapon = true;
 
     public CameraFollow GameCamera;
+    public CameraFollow Player1Camera;
+    public CameraFollow Player2Camera;
+    public AudioListener AudioListener;
+
     public Ship Ship;
     public Player Player;
     public AIEngine AIEngine;
@@ -54,6 +62,12 @@ public class GameController : MonoBehaviour
     public Canvas TitleUI;
 
     public Canvas GameUI;
+    public Image SplitScreenBorder;
+
+    public Text GameModeText;
+    public Text PlayerNameText;
+    public Text OpponentNameText;
+
     //public Text TimeText;
     public Text PlayerScoreText;
     public Text OpponentScoreText;
@@ -111,14 +125,14 @@ public class GameController : MonoBehaviour
     void Start()
     {
         maxBarWidth = PlayerHealth.rect.width;
-        pickupNGram = new NGramPredictor( N_GRAM_WINDOW_SIZE );
+        pickupNGram = new NGramPredictor(N_GRAM_WINDOW_SIZE);
         pickupNGramSequence = new List<string>();
-        nBayes = new NaiveBayesClassifier( NUM_NBAYES_ATTRIBUTES );
+        nBayes = new NaiveBayesClassifier(NUM_NBAYES_ATTRIBUTES);
 
         nBayesAttributes = new List<bool>();
-        for( int i = 0; i < NUM_NBAYES_ATTRIBUTES; ++i )
+        for (int i = 0; i < NUM_NBAYES_ATTRIBUTES; ++i)
         {
-            nBayesAttributes.Add( false );
+            nBayesAttributes.Add(false);
         }
     }
 
@@ -126,7 +140,7 @@ public class GameController : MonoBehaviour
     void Update()
     {
         // Title screen.
-        switch( currentState )
+        switch (currentState)
         {
             case GameState.Title:
             {
@@ -151,22 +165,39 @@ public class GameController : MonoBehaviour
     private void UpdateTitle()
     {
         // Slowly rotate camera.
-        GameCamera.transform.rotation *= Quaternion.Euler( new Vector3( 0, 0, Time.deltaTime ) );
+        GameCamera.transform.rotation *= Quaternion.Euler(new Vector3(0, 0, Time.deltaTime));
 
-        bool fire = Input.GetButtonDown( "Standard Weapon" );
-        if( fire )
+        bool fire = Input.GetButtonDown(Player1Input.StandardWeapon);
+        if (fire)
             StartGame();
 
-        bool cancel = Input.GetButtonDown( "Cancel" );
-        if( cancel )
+        bool cancel = Input.GetButtonDown(Player1Input.Cancel);
+        if (cancel)
             Application.Quit();
+
+        bool rotate = Input.GetButtonDown(Player1Input.Rotate);
+        if (rotate)
+        {
+            IsAI = !IsAI;
+            GameModeText.text = IsAI ? "[vs AI]" : "[Local PVP]";
+        }
     }
 
     private void UpdatePlaying()
     {
-        bool cancel = Input.GetButtonDown( "Cancel" );
-        if( cancel )
+        bool cancel = Input.GetButtonDown(Player1Input.Cancel) ||
+            (!IsAI && Input.GetButtonDown(Player2Input.Cancel));
+        if (cancel)
             ResetTitle();
+
+        if (IsAI)
+        {
+            AudioListener.transform.position = GameCamera.transform.position;
+        }
+        else
+        {
+            AudioListener.transform.position = Player1Camera.transform.position;
+        }
 
         // Update health bars.
         UpdateHealthBars();
@@ -181,15 +212,15 @@ public class GameController : MonoBehaviour
         CheckEndGame();
 
         // Weapon spawning.
-        if( !CurrentPickup )
+        if (!CurrentPickup)
         {
-            if( isReadyToSpawnWeapon )
+            if (isReadyToSpawnWeapon)
             {
                 ResetWeaponSpawnTimer();
                 isReadyToSpawnWeapon = false;
             }
 
-            if( weaponSpawnTimer > 0 )
+            if (weaponSpawnTimer > 0)
             {
                 weaponSpawnTimer -= Time.deltaTime;
             }
@@ -200,61 +231,61 @@ public class GameController : MonoBehaviour
         }
 
         // Player spawning.
-        if( CurrentPlayer )
+        if (CurrentPlayer)
         {
             playerPos = CurrentPlayer.transform.position;
         }
         else
         {
-            if( isReadyToSpawnPlayer )
+            if (isReadyToSpawnPlayer)
             {
                 playerSpawnTimer = ShipSpawnDelay;
                 isReadyToSpawnPlayer = false;
-                playerDestroyed = CreateRedText( playerPos );
+                playerDestroyed = CreateRedText(playerPos);
 
                 // Player just died.
                 --playerScore;
                 UpdateScore();
             }
 
-            if( playerDestroyed && playerSpawnTimer > 0 )
+            if (playerDestroyed && playerSpawnTimer > 0)
             {
                 playerSpawnTimer -= Time.deltaTime;
-                playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString( "F2" ) + " s)";
+                playerDestroyed.text = DESTROYED_TEXT + " (" + playerSpawnTimer.ToString("F2") + " s)";
             }
             else
             {
-                SpawnPlayer( true );
+                SpawnPlayer(true);
                 isReadyToSpawnPlayer = true;
             }
         }
 
         // Opponent spawning.
-        if( CurrentOpponent )
+        if (CurrentOpponent)
         {
             opponentPos = CurrentOpponent.transform.position;
         }
         else
         {
-            if( isReadyToSpawnOpponent )
+            if (isReadyToSpawnOpponent)
             {
                 opponentSpawnTimer = ShipSpawnDelay;
                 isReadyToSpawnOpponent = false;
-                opponentDestroyed = CreateRedText( opponentPos );
+                opponentDestroyed = CreateRedText(opponentPos);
 
                 // Opponent just died.
                 --opponentScore;
                 UpdateScore();
             }
 
-            if( opponentDestroyed && opponentSpawnTimer > 0 )
+            if (opponentDestroyed && opponentSpawnTimer > 0)
             {
                 opponentSpawnTimer -= Time.deltaTime;
-                opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString( "F2" ) + " s)";
+                opponentDestroyed.text = DESTROYED_TEXT + " (" + opponentSpawnTimer.ToString("F2") + " s)";
             }
             else
             {
-                SpawnOpponent( true );
+                SpawnOpponent(true);
                 isReadyToSpawnOpponent = true;
             }
         }
@@ -262,8 +293,9 @@ public class GameController : MonoBehaviour
 
     private void UpdateEnded()
     {
-        bool fire = Input.GetButtonDown( "Standard Weapon" );
-        if( fire )
+        bool fire = Input.GetButtonDown(Player1Input.StandardWeapon) ||
+            (!IsAI && Input.GetButtonDown(Player2Input.StandardWeapon));
+        if (fire)
             ResetTitle();
     }
 
@@ -281,12 +313,17 @@ public class GameController : MonoBehaviour
         EndUI.enabled = false;
 
         // Delete existing objects.
-        if( CurrentOpponent )
-            Destroy( CurrentOpponent.gameObject );
-        if( CurrentPlayer )
-            Destroy( CurrentPlayer.gameObject );
-        if( CurrentPickup )
-            Destroy( CurrentPickup.gameObject );
+        if (CurrentOpponent)
+            Destroy(CurrentOpponent.gameObject);
+        if (CurrentPlayer)
+            Destroy(CurrentPlayer.gameObject);
+        if (CurrentPickup)
+            Destroy(CurrentPickup.gameObject);
+
+        GameCamera.gameObject.SetActive(true);
+        Player1Camera.gameObject.SetActive(false);
+        Player2Camera.gameObject.SetActive(false);
+        SplitScreenBorder.enabled = false;
     }
 
     private void StartGame()
@@ -311,12 +348,27 @@ public class GameController : MonoBehaviour
         ResetWeaponSpawnTimer();
         //gameTime = GameDuration;
 
-        // Spawn ships.
-        SpawnPlayer( false );
-        SpawnOpponent( false );
-
         // Reset camera rotation.
-        GameCamera.transform.rotation = Quaternion.Euler( 90, 0, 0 );
+        GameCamera.transform.rotation = Quaternion.Euler(90, 0, 0);
+
+        if (!IsAI)
+        {
+            GameCamera.gameObject.SetActive(false);
+            Player1Camera.gameObject.SetActive(true);
+            Player2Camera.gameObject.SetActive(true);
+            SplitScreenBorder.enabled = true;
+            PlayerNameText.text = "Player 1";
+            OpponentNameText.text = "Player 2";
+        }
+        else
+        {
+            PlayerNameText.text = "Player";
+            OpponentNameText.text = "AI";
+        }
+
+        // Spawn ships.
+        SpawnPlayer(false);
+        SpawnOpponent(false);
 
         // Reset learning.
         pickupNGram.Reset();
@@ -326,7 +378,7 @@ public class GameController : MonoBehaviour
     private void SpawnWeapon()
     {
         // A weapon already exists, so don't spawn another one.
-        if( CurrentPickup )
+        if (CurrentPickup)
             return;
 
         // Try to predict which ship will pick up this item.
@@ -334,35 +386,35 @@ public class GameController : MonoBehaviour
         // predicted to not pick it up.
         Vector3 position = GetRandomPosition();
 
-        if( pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE )
+        if (pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE)
         {
-            if( nextPickupAction == string.Empty )
-                nextPickupAction = pickupNGram.PredictNextAction( pickupNGramSequence );
+            if (nextPickupAction == string.Empty)
+                nextPickupAction = pickupNGram.PredictNextAction(pickupNGramSequence);
 
             // A ship is being helped...
-            bool isHelpingPlayer = ( nextPickupAction == N_GRAM_OPPONENT_ACTION && CurrentPlayer );
-            bool isHelpingOpponent = ( nextPickupAction == N_GRAM_PLAYER_ACTION && CurrentOpponent );
-            if( nextPickupAction != string.Empty )
+            bool isHelpingPlayer = (nextPickupAction == N_GRAM_OPPONENT_ACTION && CurrentPlayer);
+            bool isHelpingOpponent = (nextPickupAction == N_GRAM_PLAYER_ACTION && CurrentOpponent);
+            if (nextPickupAction != string.Empty)
             {
                 bool tooClose = CurrentOpponent && CurrentPlayer &&
-                    Vector3.Distance( CurrentOpponent.transform.position,
-                    CurrentPlayer.transform.position ) < WeaponHelpDist;
+                    Vector3.Distance(CurrentOpponent.transform.position,
+                    CurrentPlayer.transform.position) < WeaponHelpDist;
 
-                if( !tooClose && ( isHelpingPlayer || isHelpingOpponent ) )
+                if (!tooClose && (isHelpingPlayer || isHelpingOpponent))
                 {
                     // Calculate a random distance from the ship being helped.
-                    float x = UnityEngine.Random.Range( WeaponSpawnDistRange.x, WeaponSpawnDistRange.y );
-                    float z = UnityEngine.Random.Range( WeaponSpawnDistRange.x, WeaponSpawnDistRange.y );
-                    Vector3 weaponDist = new Vector3( x, 0, z );
+                    float x = UnityEngine.Random.Range(WeaponSpawnDistRange.x, WeaponSpawnDistRange.y);
+                    float z = UnityEngine.Random.Range(WeaponSpawnDistRange.x, WeaponSpawnDistRange.y);
+                    Vector3 weaponDist = new Vector3(x, 0, z);
 
-                    position = ( nextPickupAction == N_GRAM_PLAYER_ACTION ) ?
+                    position = (nextPickupAction == N_GRAM_PLAYER_ACTION) ?
                         CurrentOpponent.transform.position :
                         CurrentPlayer.transform.position;
                     position += weaponDist;
 
                     // Make sure the weapon stays within the level bounds.
-                    position.x = Mathf.Clamp( position.x, LevelXBounds.x, LevelXBounds.y );
-                    position.z = Mathf.Clamp( position.z, LevelZBounds.x, LevelZBounds.y );
+                    position.x = Mathf.Clamp(position.x, LevelXBounds.x, LevelXBounds.y);
+                    position.z = Mathf.Clamp(position.z, LevelZBounds.x, LevelZBounds.y);
 
                     // Reset the next pickup action.
                     nextPickupAction = string.Empty;
@@ -379,75 +431,97 @@ public class GameController : MonoBehaviour
         }
 
         Weapons wpn = weaponTypes.GetRandomWeapon();
-        WeaponPickup pickup = ( WeaponPickup ) Instantiate( WeaponPickup, position, transform.rotation );
+        WeaponPickup pickup = (WeaponPickup)Instantiate(WeaponPickup, position, transform.rotation);
         pickup.Game = this;
         pickup.WeaponType = wpn.Type;
-        pickup.GetComponent<Renderer>().material.SetColor( "_Color", wpn.Weapon.Colour );
+        pickup.GetComponent<Renderer>().material.SetColor("_Color", wpn.Weapon.Colour);
         CurrentPickup = pickup;
 
         // Set the flag to confirm weapon has been spawned.
         isReadyToSpawnWeapon = true;
     }
 
-    private void SpawnPlayer( bool isRandomPos )
+    private void SpawnPlayer(bool isRandomPos)
     {
         // Player already exists, so don't spawn another one.
-        if( CurrentPlayer )
+        if (CurrentPlayer)
             return;
 
-        CurrentPlayer = SpawnShip( isRandomPos, 0, PlayerSpawnPos, PlayerSpawnRot );
-        Player player = ( Player ) Instantiate( Player,
-            CurrentPlayer.transform.position, CurrentPlayer.transform.rotation );
-        player.transform.SetParent( CurrentPlayer.transform );
+        CurrentPlayer = SpawnShip(isRandomPos, 0, PlayerSpawnPos, PlayerSpawnRot);
+        Player player = (Player)Instantiate(Player,
+            CurrentPlayer.transform.position, CurrentPlayer.transform.rotation);
+        player.transform.SetParent(CurrentPlayer.transform);
         player.Ship = CurrentPlayer;
-        GameCamera.Target = CurrentPlayer.transform;
+        player.InputScheme = Player1Input;
+
+        if ( IsAI )
+        {
+            GameCamera.Target = CurrentPlayer.transform;
+        }
+        else
+        {
+            Player1Camera.Target = CurrentPlayer.transform;
+        }
     }
 
-    private void SpawnOpponent( bool isRandomPos )
+    private void SpawnOpponent(bool isRandomPos)
     {
         // Opponent already exists, so don't spawn another one.
-        if( CurrentOpponent )
+        if (CurrentOpponent)
             return;
 
-        CurrentOpponent = SpawnShip( isRandomPos, 1, OpponentSpawnPos, OpponentSpawnRot );
-        AIEngine opponent = ( AIEngine ) Instantiate( AIEngine,
-            CurrentOpponent.transform.position, CurrentOpponent.transform.rotation );
-        opponent.transform.SetParent( CurrentOpponent.transform );
-        opponent.Ship = CurrentOpponent;
+        CurrentOpponent = SpawnShip(isRandomPos, 1, OpponentSpawnPos, OpponentSpawnRot);
+        if (IsAI)
+        {
+            AIEngine opponent = (AIEngine)Instantiate(AIEngine,
+                CurrentOpponent.transform.position, CurrentOpponent.transform.rotation);
+            opponent.transform.SetParent(CurrentOpponent.transform);
+            opponent.Ship = CurrentOpponent;
+        }
+        else
+        {
+            Player opponent = (Player)Instantiate(Player,
+                CurrentOpponent.transform.position, CurrentOpponent.transform.rotation);
+            opponent.transform.SetParent(CurrentOpponent.transform);
+            opponent.Ship = CurrentOpponent;
+            opponent.InputScheme = Player2Input;
+
+            Player2Camera.Target = CurrentOpponent.transform;
+        }
     }
 
-    private Ship SpawnShip( bool isRandomPos, int team, Vector2 spawnPos, float spawnRot )
+    private Ship SpawnShip(bool isRandomPos, int team, Vector2 spawnPos, float spawnRot)
     {
-        Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3( spawnPos.x, 0, spawnPos.y );
-        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler( 0, spawnRot, 0 );
-        Ship thisShip = ( Ship ) Instantiate( Ship, position, rotation );
+        Vector3 position = isRandomPos ? GetRandomPosition() : new Vector3(spawnPos.x, 0, spawnPos.y);
+        Quaternion rotation = isRandomPos ? GetRandomRotation() : Quaternion.Euler(0, spawnRot, 0);
+        Ship thisShip = (Ship)Instantiate(Ship, position, rotation);
         thisShip.Game = this;
         thisShip.Team = team;
         thisShip.InvincibilityTimer = InvincibilityDuration;
-        Instantiate( SpawnWarp, thisShip.transform.position, SpawnWarp.transform.rotation );
+        Instantiate(SpawnWarp, thisShip.transform.position, SpawnWarp.transform.rotation);
         return thisShip;
     }
 
     private Vector3 GetRandomPosition()
     {
-        float x = UnityEngine.Random.Range( LevelXBounds.x, LevelXBounds.y );
-        float z = UnityEngine.Random.Range( LevelZBounds.x, LevelZBounds.y );
-        return new Vector3( x, 0, z );
+        float x = UnityEngine.Random.Range(LevelXBounds.x, LevelXBounds.y);
+        float z = UnityEngine.Random.Range(LevelZBounds.x, LevelZBounds.y);
+        return new Vector3(x, 0, z);
     }
 
     private Quaternion GetRandomRotation()
     {
-        return Quaternion.Euler( 0, UnityEngine.Random.Range( 0, 360 ), 0 );
+        return Quaternion.Euler(0, UnityEngine.Random.Range(0, 360), 0);
     }
 
     public void ResetWeaponSpawnTimer()
     {
-        weaponSpawnTimer = UnityEngine.Random.Range( WeaponSpawnRateRange.x, WeaponSpawnRateRange.y );
+        weaponSpawnTimer = UnityEngine.Random.Range(WeaponSpawnRateRange.x, WeaponSpawnRateRange.y);
     }
 
-    private TextMesh CreateRedText( Vector3 position )
+    private TextMesh CreateRedText(Vector3 position)
     {
-        TextMesh text = Instantiate( RedText, position, Quaternion.Euler( new Vector3( 90, 0, 0 ) ) );
+        TextMesh text = Instantiate(RedText, position, Quaternion.Euler(new Vector3(90, 0, 0)));
         text.GetComponent<TextDestroy>().Duration = ShipSpawnDelay;
         return text;
     }
@@ -462,31 +536,31 @@ public class GameController : MonoBehaviour
     {
         // Update player's health bar.
         float playerOffset = maxBarWidth;
-        if( CurrentPlayer )
+        if (CurrentPlayer)
         {
-            float playerBarWidth = ( float ) CurrentPlayer.Health / Ship.Health * maxBarWidth;
+            float playerBarWidth = (float)CurrentPlayer.Health / Ship.Health * maxBarWidth;
             playerOffset = maxBarWidth - playerBarWidth;
         }
 
-        PlayerHealth.offsetMax = new Vector2( -playerOffset, PlayerHealth.offsetMax.y );
+        PlayerHealth.offsetMax = new Vector2(-playerOffset, PlayerHealth.offsetMax.y);
 
         // Update opponent's health bar.
         float opponentOffset = maxBarWidth;
-        if( CurrentOpponent )
+        if (CurrentOpponent)
         {
-            float opponentBarWidth = ( float ) CurrentOpponent.Health / Ship.Health * maxBarWidth;
+            float opponentBarWidth = (float)CurrentOpponent.Health / Ship.Health * maxBarWidth;
             opponentOffset = maxBarWidth - opponentBarWidth;
         }
 
-        OpponentHealth.offsetMin = new Vector2( opponentOffset, OpponentHealth.offsetMax.y );
+        OpponentHealth.offsetMin = new Vector2(opponentOffset, OpponentHealth.offsetMax.y);
     }
 
     private void UpdateWeaponText()
     {
         // Update player's weapon text.
         string playerWeapon = "";
-        if( CurrentPlayer && CurrentPlayer.HeavyWeapon &&
-            CurrentPlayer.HeavyWeapon.Ammo > 0 )
+        if (CurrentPlayer && CurrentPlayer.HeavyWeapon &&
+            CurrentPlayer.HeavyWeapon.Ammo > 0)
         {
             playerWeapon = CurrentPlayer.HeavyWeapon.Name +
                 " " + CurrentPlayer.HeavyWeapon.Ammo + "x";
@@ -496,8 +570,8 @@ public class GameController : MonoBehaviour
 
         // Update opponent's weapon text.
         string opponentWeapon = "";
-        if( CurrentOpponent && CurrentOpponent.HeavyWeapon &&
-            CurrentOpponent.HeavyWeapon.Ammo > 0 )
+        if (CurrentOpponent && CurrentOpponent.HeavyWeapon &&
+            CurrentOpponent.HeavyWeapon.Ammo > 0)
         {
             opponentWeapon = CurrentOpponent.HeavyWeapon.Name +
                 " " + CurrentOpponent.HeavyWeapon.Ammo + "x";
@@ -555,51 +629,51 @@ public class GameController : MonoBehaviour
 
     private void CheckEndGame()
     {
-        if( opponentScore == 0 )
+        if (opponentScore == 0)
         {
-            SetWin( PLAYER_WIN );
+            SetWin(PLAYER_WIN);
         }
-        else if( playerScore == 0 )
+        else if (playerScore == 0)
         {
-            SetWin( OPPONENT_WIN );
+            SetWin(OPPONENT_WIN);
         }
     }
 
-    private void SetWin( string msg )
+    private void SetWin(string msg)
     {
         currentState = GameState.Ended;
         EndUI.enabled = true;
         endSound.Play();
 
-        if( CurrentPickup )
-            Destroy( CurrentPickup.gameObject );
+        if (CurrentPickup)
+            Destroy(CurrentPickup.gameObject);
 
         WinText.text = msg;
     }
 
     // Register which ship picked up the weapon.
-    public void UpdatePickupNGram( int team )
+    public void UpdatePickupNGram(int team)
     {
-        string value = ( team == 0 ) ? N_GRAM_PLAYER_ACTION : N_GRAM_OPPONENT_ACTION;
+        string value = (team == 0) ? N_GRAM_PLAYER_ACTION : N_GRAM_OPPONENT_ACTION;
 
-        pickupNGramSequence.Add( value );
+        pickupNGramSequence.Add(value);
 
         // If not enough actions in the sequence, then don't register it.
-        if( pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE + 1 )
+        if (pickupNGramSequence.Count == N_GRAM_WINDOW_SIZE + 1)
         {
-            pickupNGram.RegisterSequence( pickupNGramSequence );
+            pickupNGram.RegisterSequence(pickupNGramSequence);
 
             // Remove the oldest action.
-            pickupNGramSequence.RemoveAt( 0 );
+            pickupNGramSequence.RemoveAt(0);
         }
     }
 
-    public void UpdateNBayes( bool isPositiveExample )
+    public void UpdateNBayes(bool isPositiveExample)
     {
-        if( !CurrentPlayer || !CurrentOpponent )
+        if (!CurrentPlayer || !CurrentOpponent)
             return;
 
-        UpdateNBayesAttributes( false );
+        UpdateNBayesAttributes(false);
 
         //Debug.Log( "Updating NBayes: isPlayerFast: " + nBayesAttributes[ 0 ] +
         //    ", isOpponentFast: " + nBayesAttributes[ 1 ] +
@@ -609,59 +683,59 @@ public class GameController : MonoBehaviour
         //    ", isOpponentHealthy: " + nBayesAttributes[ 5 ] +
         //    ", isPositiveExample: " + isPositiveExample );
 
-        nBayes.Update( nBayesAttributes, isPositiveExample );
+        nBayes.Update(nBayesAttributes, isPositiveExample);
     }
 
-    private void UpdateNBayesAttributes( bool isPredicting )
+    private void UpdateNBayesAttributes(bool isPredicting)
     {
-        bool isPlayerFast = ClassifySpeed( CurrentPlayer );
-        bool isOpponentFast = ClassifySpeed( CurrentOpponent );
-        bool isPlayerHealthy = ClassifyHealthy( CurrentPlayer.Health );
-        bool isOpponentHealthy = ClassifyHealthy( CurrentOpponent.Health );
+        bool isPlayerFast = ClassifySpeed(CurrentPlayer);
+        bool isOpponentFast = ClassifySpeed(CurrentOpponent);
+        bool isPlayerHealthy = ClassifyHealthy(CurrentPlayer.Health);
+        bool isOpponentHealthy = ClassifyHealthy(CurrentOpponent.Health);
 
         // isPlayerFast
-        nBayesAttributes[ 0 ] = isPredicting ? isOpponentFast : isPlayerFast;
+        nBayesAttributes[0] = isPredicting ? isOpponentFast : isPlayerFast;
         // isOpponentFast
-        nBayesAttributes[ 1 ] = isPredicting ? isPlayerFast : isOpponentFast;
+        nBayesAttributes[1] = isPredicting ? isPlayerFast : isOpponentFast;
         // isOpponentFarAway
-        nBayesAttributes[ 2 ] = ClassifyFarAway( CurrentPlayer.transform.position,
-            CurrentOpponent.transform.position );
+        nBayesAttributes[2] = ClassifyFarAway(CurrentPlayer.transform.position,
+            CurrentOpponent.transform.position);
         // isFacingEachOther
-        nBayesAttributes[ 3 ] = ClassifyFacing( CurrentPlayer.FrontVector,
-            CurrentOpponent.FrontVector );
+        nBayesAttributes[3] = ClassifyFacing(CurrentPlayer.FrontVector,
+            CurrentOpponent.FrontVector);
         // isPlayerHealthy
-        nBayesAttributes[ 4 ] = isPredicting ? isOpponentHealthy : isPlayerHealthy;
+        nBayesAttributes[4] = isPredicting ? isOpponentHealthy : isPlayerHealthy;
         // isOpponentHealthy
-        nBayesAttributes[ 5 ] = isPredicting ? isPlayerHealthy : isOpponentHealthy;
+        nBayesAttributes[5] = isPredicting ? isPlayerHealthy : isOpponentHealthy;
     }
 
-    private bool ClassifySpeed( Ship ship )
+    private bool ClassifySpeed(Ship ship)
     {
         return ship.GetVelocity().magnitude > Ship.ThrustSpeed / 2 && !ship.IsRolling();
     }
 
-    private bool ClassifyFarAway( Vector3 pos1, Vector3 pos2 )
+    private bool ClassifyFarAway(Vector3 pos1, Vector3 pos2)
     {
-        return Vector3.Distance( pos1, pos2 ) >= WeaponHelpDist;
+        return Vector3.Distance(pos1, pos2) >= WeaponHelpDist;
     }
 
-    private bool ClassifyFacing( Vector3 dir1, Vector3 dir2 )
+    private bool ClassifyFacing(Vector3 dir1, Vector3 dir2)
     {
         // Front vectors are within 45 degrees.
-        return Vector3.Angle( -dir1, dir2 ) <= 45;
+        return Vector3.Angle(-dir1, dir2) <= 45;
     }
 
-    private bool ClassifyHealthy( int health )
+    private bool ClassifyHealthy(int health)
     {
         return health > Ship.Health / 2;
     }
 
     public bool PredictIsRolling()
     {
-        if( !CurrentPlayer || !CurrentOpponent )
+        if (!CurrentPlayer || !CurrentOpponent)
             return false;
 
-        UpdateNBayesAttributes( true );
-        return nBayes.Predict( nBayesAttributes );
+        UpdateNBayesAttributes(true);
+        return nBayes.Predict(nBayesAttributes);
     }
 }
